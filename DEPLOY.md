@@ -34,6 +34,23 @@ O `wsgi.py` cria as tabelas e o admin padrão (`admin`/`admin`) no primeiro boot
 - `DATABASE_URL` — Postgres (Supabase) em produção; se omitida, usa SQLite local.
 - `SECRET_KEY`
 - `JWT_SECRET_KEY`
+- `PYTHON_VERSION` = `3.12.3` (no Render, força Python 3.12, compatível com psycopg2)
+
+## Deploy no Render (Opção A — recomendada)
+
+1. Suba o projeto para um repositório GitHub.
+2. Em https://render.com → "New" → "Web Service" → conecte o repo.
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn wsgi:app`
+   - **Instance Type:** Free.
+3. Em "Environment", adicione:
+   - `DATABASE_URL` = URI do Supabase
+   - `SECRET_KEY` = string longa
+   - `JWT_SECRET_KEY` = string longa
+   - `PYTHON_VERSION` = `3.12.3`
+4. Deploy. O `wsgi.py` cria as tabelas e o admin padrão no primeiro boot.
+
+> O plano free do Render "dorme" após 15 min de inatividade (~30-60s para acordar).
 
 ## Como o front-end chama as rotas
 O frontend é servido pelo próprio Flask (mesmo origin), então as chamadas são relativas:

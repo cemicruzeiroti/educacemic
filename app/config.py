@@ -8,8 +8,11 @@ class Config:
     # Render/Heroku provide "postgres://" which SQLAlchemy 2.x no longer accepts
     if _db_url.startswith("postgres://"):
         _db_url = _db_url.replace("postgres://", "postgresql://", 1)
-    # Supabase/Postgres exigem SSL em produção
-    if _db_url.startswith("postgresql://") and "sslmode=" not in _db_url:
+    # Força o driver psycopg2 (instalado via psycopg2-binary)
+    if _db_url.startswith("postgresql://"):
+        _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    # Supabase/Postgres exigem SSL em produção (SQLite não aceita sslmode)
+    if _db_url.startswith("postgresql") and "sslmode=" not in _db_url:
         _db_url += ("&" if "?" in _db_url else "?") + "sslmode=require"
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
