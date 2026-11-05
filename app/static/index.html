@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Educa CEMI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+  <link rel="stylesheet" href="/static/css/theme.css?v=2" />
+</head>
+<body class="min-h-screen">
+  <header class="surface border-b sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-4 py-2 flex items-center gap-6">
+      <h1 class="text-lg font-bold link whitespace-nowrap">Educa CEMI</h1>
+      <nav id="mainNav" class="flex gap-2 flex-wrap hidden flex-1 justify-center">
+        <button data-view="dashboard" class="navbtn px-3 py-1 rounded surface">Dashboard</button>
+        <button data-view="occurrences" class="navbtn px-3 py-1 rounded surface">Ocorrências</button>
+        <button data-view="students" class="navbtn px-3 py-1 rounded surface">Estudantes</button>
+        <button data-view="classes" class="navbtn px-3 py-1 rounded surface">Turmas</button>
+        <button data-view="admin" class="navbtn px-3 py-1 rounded surface">Admin</button>
+      </nav>
+      <div class="flex items-center gap-3 ml-auto">
+        <span id="whoami" class="text-sm text-muted"></span>
+        <button id="themeToggle" class="px-3 py-1 rounded border surface">Tema</button>
+        <button id="logoutBtn" class="px-3 py-1 rounded border surface hidden">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- AUTH -->
+    <section id="view-auth" class="view">
+      <div class="max-w-md mx-auto surface border rounded p-8">
+        <h2 class="text-2xl font-semibold mb-6 text-center">Login</h2>
+        <form id="loginForm" class="space-y-3">
+          <input name="username" placeholder="Nome de Usuário" class="w-full border rounded px-3 py-2 surface" required />
+          <input name="password" type="password" placeholder="Senha" class="w-full border rounded px-3 py-2 surface" required />
+          <a href="/register" class="block text-sm text-center link mb-2">Não possui cadastro?</a>
+          <button class="btn-primary px-4 py-2 rounded w-full">Entrar</button>
+        </form>
+        <p id="loginMsg" class="text-sm mt-2 text-red-500 text-center"></p>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view hidden">
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="surface border rounded p-4">
+          <p class="text-muted text-sm">Estudantes cadastrados</p>
+          <p id="statStudents" class="text-2xl font-bold">-</p>
+        </div>
+        <div class="surface border rounded p-4">
+          <p class="text-muted text-sm">Ocorrências registradas</p>
+          <p id="statOcc" class="text-2xl font-bold">-</p>
+        </div>
+        <div class="surface border rounded p-4">
+          <p class="text-muted text-sm">Turmas</p>
+          <p id="statClasses" class="text-2xl font-bold">-</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STUDENTS -->
+    <section id="view-students" class="view hidden">
+      <div class="surface border rounded p-4 mb-4">
+        <h3 class="font-semibold mb-2">Cadastrar estudante</h3>
+        <form id="createStudentForm" class="flex gap-2 flex-wrap items-end">
+          <input name="nome" placeholder="Nome" class="border rounded px-3 py-2 surface flex-1" required />
+          <select name="ano" class="border rounded px-3 py-2 surface" required>
+            <option value="" disabled selected>Selecione Ano</option>
+            <option value="1">1°</option>
+            <option value="2">2°</option>
+            <option value="3">3°</option>
+          </select>
+          <select name="letra" class="border rounded px-3 py-2 surface" required>
+            <option value="" disabled selected>Selecione a turma</option>
+          </select>
+          <button type="submit" class="btn-primary px-4 py-2 rounded">Cadastrar</button>
+        </form>
+      </div>
+      <div class="surface border rounded p-4 mb-4">
+        <h3 class="font-semibold mb-2 flex items-center gap-2">
+          Cadastrar estudantes em bloco (.CSV)
+          <div title="O arquivo CSV deve conter as colunas 'nome' e 'turma' para a importação funcionar." class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-black text-xs font-bold cursor-help">
+            ?
+          </div>
+        </h3>
+        <form id="bulkForm" class="flex gap-2 items-center">
+          <input type="file" name="file" accept=".csv" class="surface" />
+          <button class="btn-primary px-4 py-2 rounded">Importar</button>
+        </form>
+      </div>
+      <div class="surface border rounded p-4 mb-2">
+        <h3 class="font-semibold mb-2">Buscar Estudante</h3>
+        <input id="studentSearch" placeholder="(nome ou turma)" class="border rounded px-3 py-1 surface w-full" />
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm surface border rounded">
+          <thead class="bg-gray-100 dark:bg-gray-800">
+            <tr>
+              <th class="p-2 text-left cursor-pointer" onclick="toggleStudentSort('nome')" title="Ordenar por Nome">Nome <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+              <th class="p-2 text-left cursor-pointer" onclick="toggleStudentSort('turma')" title="Ordenar por Turma">Turma <i data-lucide="arrow-up-down" class="w-3 h-3 inline"></i></th>
+              <th class="p-2 text-left">Pontos</th>
+              <th class="p-2 text-left">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="studentsTable"></tbody>
+        </table>
+      </div>
+      <div id="studentsPagination" class="flex items-center justify-center gap-3 mt-3"></div>
+    </section>
+
+    <!-- OCCURRENCES -->
+    <section id="view-occurrences" class="view hidden">
+      <div class="surface border rounded p-6 mb-4">
+        <h3 class="font-semibold mb-4 text-center">Registrar Ocorrência</h3>
+        <form id="createOccForm" class="space-y-3">
+          <div class="grid md:grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm text-muted block mb-1">Turma</label>
+              <select name="turma" id="occTurmaSelect" class="border rounded px-3 py-2 surface w-full" required>
+                <option value="" disabled selected>Selecione a turma</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-sm text-muted block mb-1">Estudante</label>
+              <select name="student_id" id="occStudentSelect" class="border rounded px-3 py-2 surface w-full" required>
+                <option value="" disabled selected>Selecione Estudante</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="text-sm text-muted block mb-1">Tipo de ocorrência</label>
+            <div class="relative">
+              <button type="button" id="tipoDropdownBtn" class="border rounded px-3 py-2 surface w-full text-left flex items-center justify-between">
+                <span id="tipoDropdownLabel" class="text-muted">Selecione Tipo</span>
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </button>
+              <div id="tipoDropdownMenu" class="hidden absolute z-20 mt-1 w-full surface border rounded shadow-lg max-h-60 overflow-y-auto"></div>
+              <input type="hidden" name="tipo" id="tipoHidden" required />
+            </div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-3">
+            <div>
+              <label class="text-sm text-muted block mb-1">Data</label>
+              <input name="data" type="date" class="border rounded px-3 py-2 surface w-full" required />
+            </div>
+            <div>
+              <label class="text-sm text-muted block mb-1">Hora</label>
+              <input name="hora" type="time" class="border rounded px-3 py-2 surface w-full" required />
+            </div>
+          </div>
+          <div>
+            <label class="text-sm text-muted block mb-1">Descrição</label>
+            <textarea name="descricao" rows="3" placeholder="Descreva a ocorrência" class="border rounded px-3 py-2 surface w-full" required></textarea>
+          </div>
+          <button type="submit" class="btn-primary px-4 py-2 rounded w-full">Registrar Ocorrência</button>
+        </form>
+      </div>
+      <div class="surface border rounded p-4 mb-2">
+        <h3 class="font-semibold mb-2">Filtrar Ocorrências</h3>
+        <div class="flex gap-2 items-center flex-wrap">
+          <!-- <label class="text-sm text-muted"></label> -->
+          <select id="occFilterBy" class="border rounded px-3 py-1 surface">
+            <option value="mine" selected>Registradas por mim</option>
+            <option value="turma">Turma</option>
+            <option value="nome">Nome</option>
+          </select>
+          <input id="occSearch" placeholder="Buscar" class="border rounded px-3 py-1 surface flex-1" />
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm surface border rounded">
+          <thead class="bg-gray-100 dark:bg-gray-800">
+            <tr>
+              <th class="p-2 text-left">Data</th>
+              <th class="p-2 text-left">Estudante</th>
+              <th class="p-2 text-left">Tipo</th>
+              <th class="p-2 text-left">Registrado por</th>
+              <th class="p-2 text-left">Descrição</th>
+              <th class="p-2 text-left">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="occTable"></tbody>
+        </table>
+      </div>
+      <div id="occPagination" class="flex items-center justify-center gap-3 mt-3"></div>
+    </section>
+
+    <!-- CLASSES -->
+    <section id="view-classes" class="view hidden">
+      <div class="surface border rounded p-4 max-w-md mx-auto text-center">
+        <h3 class="font-semibold mb-3">Turma</h3>
+        <select id="className" class="border rounded px-3 py-2 surface w-full mb-4">
+          <option value="" disabled selected>Selecione a turma</option>
+          <option value="ALL">Todas as turmas</option>
+        </select>
+        <div class="flex flex-col gap-3">
+          <button id="loadClassPdf" class="btn-primary px-4 py-2 rounded flex items-center justify-center gap-2">
+            <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+            Relatório Resumido (Ponto Formativo)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN -->
+    <section id="view-admin" class="view hidden">
+      <div class="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+        <div onclick="openAdminModal('create')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center">
+          <h3 class="font-semibold">Criar admin</h3>
+        </div>
+        <div onclick="openAdminModal('requests')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center relative">
+          <h3 class="font-semibold">Solicitações de cadastro</h3>
+          <span id="reqBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center"></span>
+        </div>
+        <div onclick="openAdminModal('config')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center">
+          <h3 class="font-semibold">Configurar ponto formativo</h3>
+        </div>
+        <div onclick="openAdminModal('users')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center">
+          <h3 class="font-semibold">Usuários cadastrados</h3>
+        </div>
+      </div>
+
+      <div id="adminModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="surface border rounded p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between mb-4">
+            <h3 id="adminModalTitle" class="font-semibold"></h3>
+            <button onclick="closeAdminModal()" class="text-muted hover:text-red-500 text-2xl leading-none">&times;</button>
+          </div>
+          <div id="adminModalBody"></div>
+        </div>
+      </div>
+
+      <div id="adminContentHolder" class="hidden">
+        <div id="blkCreateAdmin">
+          <form id="createAdminForm" class="flex gap-2 flex-wrap">
+            <input name="username" placeholder="Usuário" class="border rounded px-3 py-2 surface flex-1" required />
+            <input name="password" type="password" placeholder="Senha" class="border rounded px-3 py-2 surface flex-1" required />
+            <button class="btn-primary px-4 py-2 rounded">Criar</button>
+          </form>
+        </div>
+        <div id="blkRequests">
+          <div id="reqList" class="space-y-2"></div>
+        </div>
+        <div id="blkConfig">
+          <div class="mb-3">
+            <label class="text-sm text-muted block mb-1">Ponto inicial por estudante</label>
+            <input id="cfgInitial" type="number" step="0.1" class="border rounded px-3 py-2 surface w-full" />
+          </div>
+          <div id="cfgPenalties" class="space-y-2 mb-3"></div>
+          <button id="saveConfigBtn" class="btn-primary px-4 py-2 rounded w-full">Salvar</button>
+          <p class="text-xs text-muted mt-2">Ao salvar, os pontos de todos os estudantes são recalculados.</p>
+        </div>
+        <div id="blkUsers">
+          <div class="mb-2">
+            <input id="userSearch" placeholder="Pesquisar por CPF ou nome" class="border rounded px-3 py-1 surface w-full" />
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm surface border rounded">
+              <thead class="bg-gray-100 dark:bg-gray-800">
+                <tr>
+                  <th class="p-2 text-left">CPF</th>
+                  <th class="p-2 text-left">Nome completo</th>
+                  <th class="p-2 text-left">Cargo</th>
+                  <th class="p-2 text-left">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="usersTable"></tbody>
+            </table>
+          </div>
+          <div id="usersPagination" class="flex items-center justify-center gap-3 mt-3"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="surface border rounded p-6 w-80 text-center">
+      <div id="modalBody"></div>
+    </div>
+  </div>
+  <div id="toast" class="fixed bottom-4 right-4 px-4 py-2 rounded shadow hidden"></div>
+
+  <script src="/static/js/api.js?v=3"></script>
+  <script src="/static/js/app.js?v=3"></script>
+</body>
+</html>

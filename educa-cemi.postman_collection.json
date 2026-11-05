@@ -1,0 +1,227 @@
+{
+  "info": {
+    "name": "Educa CEMI - API",
+    "description": "Collection para testar a API de registro de ocorrencias.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:5000" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Geral",
+      "item": [
+        {
+          "name": "Root",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/" }
+        },
+        {
+          "name": "Health",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/health" }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('token', json.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Registrar (publico)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"prof1\",\n  \"password\": \"123\",\n  \"cargo\": \"professor\"\n}"
+            },
+            "url": "{{base_url}}/api/auth/register"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Listar solicitacoes de cadastro",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/admin/registration-requests", "host": ["{{base_url}}"], "path": ["api","admin","registration-requests"], "query": [{ "key": "status", "value": "pending" }] }
+          }
+        },
+        {
+          "name": "Aprovar solicitacao",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/admin/registration-requests/1/approve"
+          }
+        },
+        {
+          "name": "Rejeitar solicitacao",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/admin/registration-requests/1/reject"
+          }
+        },
+        {
+          "name": "Criar admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin2\",\n  \"password\": \"admin2\",\n  \"cargo\": \"admin\"\n}"
+            },
+            "url": "{{base_url}}/api/admin/users"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Alunos",
+      "item": [
+        {
+          "name": "Listar alunos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/students", "host": ["{{base_url}}"], "path": ["api","students"], "query": [{ "key": "turma", "value": "1A" }] }
+          }
+        },
+        {
+          "name": "Cadastrar aluno",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Joao\",\n  \"turma\": \"1A\"\n}"
+            },
+            "url": "{{base_url}}/api/students"
+          }
+        },
+        {
+          "name": "Atualizar aluno / pontos",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pontos_formativo\": 1.0\n}"
+            },
+            "url": "{{base_url}}/api/students/1"
+          }
+        },
+        {
+          "name": "Importar alunos (CSV)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "", "description": "CSV com colunas nome,turma" }
+              ]
+            },
+            "url": "{{base_url}}/api/students/bulk"
+          }
+        },
+        {
+          "name": "PDF ocorrencias do aluno",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/students/1/occurrences/pdf"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ocorrencias",
+      "item": [
+        {
+          "name": "Registrar ocorrencia",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"student_id\": 1,\n  \"tipo\": \"OCORRENCIA LEVE\",\n  \"descricao\": \"Conversou em aula\"\n}"
+            },
+            "url": "{{base_url}}/api/occurrences"
+          }
+        },
+        {
+          "name": "Listar ocorrencias",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/api/occurrences", "host": ["{{base_url}}"], "path": ["api","occurrences"], "query": [{ "key": "student_id", "value": "1" }, { "key": "turma", "value": "1A" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Turmas",
+      "item": [
+        {
+          "name": "Ocorrencias da turma",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/classes/1A/occurrences"
+          }
+        },
+        {
+          "name": "PDF pontos formativos da turma",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/api/classes/1A/points/pdf"
+          }
+        }
+      ]
+    }
+  ]
+}
