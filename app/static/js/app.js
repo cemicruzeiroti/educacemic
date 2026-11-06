@@ -145,10 +145,10 @@ function updateAuthUI() {
       admin: ['dashboard','students','occurrences','classes','admin'],
       professor: ['occurrences'],
       soe: ['occurrences'],
-      coordenador: ['dashboard','occurrences','classes'],
-      supervisor: ['dashboard','occurrences','classes'],
-      vicediretor: ['dashboard','occurrences','classes'],
-      diretor: ['dashboard','occurrences','classes'],
+      coordenador: ['dashboard','students','occurrences','classes'],
+      supervisor: ['dashboard','students','occurrences','classes'],
+      vicediretor: ['dashboard','students','occurrences','classes'],
+      diretor: ['dashboard','students','occurrences','classes'],
     }[user.cargo] || ['occurrences'];
     document.querySelectorAll('.navbtn').forEach(b => {
       if (allowed.includes(b.dataset.view)) b.classList.remove('hidden');
@@ -655,8 +655,8 @@ function updateReqBadge(count) {
   }
 }
 
-const adminBlockIds = { create: 'blkCreateAdmin', requests: 'blkRequests', config: 'blkConfig', users: 'blkUsers' };
-const adminTitles = { create: 'Criar Admin', requests: 'Solicitações de Cadastro', config: 'Configuração de Pontos Formativos', users: 'Usuários Cadastrados' };
+const adminBlockIds = { create: 'blkCreateAdmin', students: 'blkStudents', requests: 'blkRequests', config: 'blkConfig', users: 'blkUsers' };
+const adminTitles = { create: 'Criar Admin', students: 'Estudantes', requests: 'Solicitações de Cadastro', config: 'Configuração de Pontos Formativos', users: 'Usuários Cadastrados' };
 let currentAdminBlock = null;
 function openAdminModal(key) {
   const block = document.getElementById(adminBlockIds[key]);
@@ -670,6 +670,17 @@ function openAdminModal(key) {
   const modal = document.getElementById('adminModal');
   modal.classList.remove('hidden');
   modal.classList.add('flex');
+  if (key === 'students') {
+    const sel = document.querySelector('#blkStudents select[name=letra]');
+    if (sel && sel.options.length <= 1) {
+      for (let c = 65; c <= 90; c++) {
+        const o = document.createElement('option');
+        o.value = String.fromCharCode(c);
+        o.textContent = String.fromCharCode(c);
+        sel.appendChild(o);
+      }
+    }
+  }
   if (key === 'requests') loadRequests();
   if (key === 'config') loadConfig();
   if (key === 'users') loadUsers();
@@ -887,10 +898,10 @@ window.addEventListener('hashchange', () => {
     admin: ['dashboard','students','occurrences','classes','admin'],
     professor: ['occurrences'],
     soe: ['occurrences'],
-    coordenador: ['dashboard','occurrences','classes'],
-    supervisor: ['dashboard','occurrences','classes'],
-    vicediretor: ['dashboard','occurrences','classes'],
-    diretor: ['dashboard','occurrences','classes'],
+    coordenador: ['dashboard','students','occurrences','classes'],
+    supervisor: ['dashboard','students','occurrences','classes'],
+    vicediretor: ['dashboard','students','occurrences','classes'],
+    diretor: ['dashboard','students','occurrences','classes'],
   }[user.cargo] || ['occurrences'];
   if (allowed.includes(name)) {
     showView(name, false);

@@ -52,6 +52,12 @@ O `wsgi.py` cria as tabelas e o admin padrão (`admin`/`admin`) no primeiro boot
 
 > O plano free do Render "dorme" após 15 min de inatividade (~30-60s para acordar).
 
+## Observação importante sobre a senha do Supabase
+Se a senha do banco contiver caracteres especiais (`@`, `#`, `:`, `/`, etc.), ela deve estar
+**URL-encoded** na `DATABASE_URL`. Exemplo: senha `a@b` → `a%40b`.
+
+O projeto tenta corrigir automaticamente, mas se o erro persistir, verifique a URI copiada.
+
 ## Como o front-end chama as rotas
 O frontend é servido pelo próprio Flask (mesmo origin), então as chamadas são relativas:
 ```

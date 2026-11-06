@@ -8,6 +8,40 @@ class Config:
     # Render/Heroku provide "postgres://" which SQLAlchemy 2.x no longer accepts
     if _db_url.startswith("postgres://"):
         _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+
+    # Re-encode credentials safely (passwords may contain special chars like @)
+    if _db_url.startswith("postgresql://") or _db_url.startswith("postgresql+psycopg2://"):
+        try:
+            from urllib.parse import urlsplit, urlunsplit, quote
+            # strip driver suffix for parsing
+            _driver = ""
+            _parse_url = _db_url
+            if _db_url.startswith("postgresql+psycopg2://"):
+                _driver = "postgresql+psycopg2"
+                _parse_url = "postgresql://" + _db_url.split("://", 1)[1]
+            parts = urlsplit(_parse_url)
+            host = parts.hostname or ""
+            # If host still contains '@' (malformed/unencoded password), recover
+            if "@" in host:
+                left, host = host.rsplit("@", 1)
+                # append left part to password
+                pwd = (parts.password or "") + "@" + left
+                user = parts.username or ""
+            else:
+                user = parts.username or ""
+                pwd = parts.password or ""
+            if user or pwd:
+                user = quote(user, safe="")
+                pwd = quote(pwd, safe="")
+                netloc = f"{user}:{pwd}@{host}"
+                if parts.port:
+                    netloc += f":{parts.port}"
+                _db_url = urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+                if _driver:
+                    _db_url = _db_url.replace("postgresql://", _driver + "://", 1)
+        except Exception:
+            pass
+
     # Força o driver psycopg2 (instalado via psycopg2-binary)
     if _db_url.startswith("postgresql://"):
         _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)

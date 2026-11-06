@@ -65,34 +65,6 @@
 
     <!-- STUDENTS -->
     <section id="view-students" class="view hidden">
-      <div class="surface border rounded p-4 mb-4">
-        <h3 class="font-semibold mb-2">Cadastrar estudante</h3>
-        <form id="createStudentForm" class="flex gap-2 flex-wrap items-end">
-          <input name="nome" placeholder="Nome" class="border rounded px-3 py-2 surface flex-1" required />
-          <select name="ano" class="border rounded px-3 py-2 surface" required>
-            <option value="" disabled selected>Selecione Ano</option>
-            <option value="1">1°</option>
-            <option value="2">2°</option>
-            <option value="3">3°</option>
-          </select>
-          <select name="letra" class="border rounded px-3 py-2 surface" required>
-            <option value="" disabled selected>Selecione a turma</option>
-          </select>
-          <button type="submit" class="btn-primary px-4 py-2 rounded">Cadastrar</button>
-        </form>
-      </div>
-      <div class="surface border rounded p-4 mb-4">
-        <h3 class="font-semibold mb-2 flex items-center gap-2">
-          Cadastrar estudantes em bloco (.CSV)
-          <div title="O arquivo CSV deve conter as colunas 'nome' e 'turma' para a importação funcionar." class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-black text-xs font-bold cursor-help">
-            ?
-          </div>
-        </h3>
-        <form id="bulkForm" class="flex gap-2 items-center">
-          <input type="file" name="file" accept=".csv" class="surface" />
-          <button class="btn-primary px-4 py-2 rounded">Importar</button>
-        </form>
-      </div>
       <div class="surface border rounded p-4 mb-2">
         <h3 class="font-semibold mb-2">Buscar Estudante</h3>
         <input id="studentSearch" placeholder="(nome ou turma)" class="border rounded px-3 py-1 surface w-full" />
@@ -213,6 +185,9 @@
         <div onclick="openAdminModal('create')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center">
           <h3 class="font-semibold">Criar admin</h3>
         </div>
+        <div onclick="openAdminModal('students')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center">
+          <h3 class="font-semibold">Estudantes</h3>
+        </div>
         <div onclick="openAdminModal('requests')" class="surface border rounded p-6 cursor-pointer hover:shadow-lg transition text-center relative">
           <h3 class="font-semibold">Solicitações de cadastro</h3>
           <span id="reqBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center"></span>
@@ -242,6 +217,36 @@
             <input name="password" type="password" placeholder="Senha" class="border rounded px-3 py-2 surface flex-1" required />
             <button class="btn-primary px-4 py-2 rounded">Criar</button>
           </form>
+        </div>
+        <div id="blkStudents">
+          <div class="mb-4">
+            <h4 class="font-semibold mb-2">Cadastrar estudante</h4>
+            <form id="createStudentForm" class="flex gap-2 flex-wrap items-end">
+              <input name="nome" placeholder="Nome" class="border rounded px-3 py-2 surface flex-1" required />
+              <select name="ano" class="border rounded px-3 py-2 surface" required>
+                <option value="" disabled selected>Selecione Ano</option>
+                <option value="1">1°</option>
+                <option value="2">2°</option>
+                <option value="3">3°</option>
+              </select>
+              <select name="letra" class="border rounded px-3 py-2 surface" required>
+                <option value="" disabled selected>Selecione a turma</option>
+              </select>
+              <button type="submit" class="btn-primary px-4 py-2 rounded">Cadastrar</button>
+            </form>
+          </div>
+          <div>
+            <h4 class="font-semibold mb-2 flex items-center gap-2">
+              Cadastrar estudantes em bloco (.CSV)
+              <div title="O arquivo CSV deve conter as colunas 'nome' e 'turma' para a importação funcionar." class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-200 text-black text-xs font-bold cursor-help">
+                ?
+              </div>
+            </h4>
+            <form id="bulkForm" class="flex gap-2 items-center">
+              <input type="file" name="file" accept=".csv" class="surface" />
+              <button class="btn-primary px-4 py-2 rounded">Importar</button>
+            </form>
+          </div>
         </div>
         <div id="blkRequests">
           <div id="reqList" class="space-y-2"></div>
