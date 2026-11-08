@@ -21,16 +21,19 @@
   </header>
   <main class="max-w-md mx-auto px-4 py-10">
     <div class="surface border rounded p-8">
-      <h2 class="text-2xl font-semibold mb-6 text-center">Cadastro público</h2>
+      <h2 class="text-2xl font-semibold mb-6 text-center">Cadastro pÃºblico</h2>
       <form id="registerForm" class="space-y-3">
-        <input name="cpf" placeholder="CPF (apenas números)" inputmode="numeric" pattern="[0-9]*" maxlength="11" class="w-full border rounded px-3 py-2 surface" required />
+        <input name="cpf" placeholder="CPF (apenas nÃºmeros)" inputmode="numeric" pattern="[0-9]*" maxlength="11" class="w-full border rounded px-3 py-2 surface" required />
         <input name="nome_completo" placeholder="Nome completo" class="w-full border rounded px-3 py-2 surface" required />
-        <input name="username" placeholder="Nome de usuário" class="w-full border rounded px-3 py-2 surface" required />
+        <input name="username" placeholder="Nome de usuÃ¡rio" class="w-full border rounded px-3 py-2 surface" required />
         <input name="password" type="password" placeholder="Senha" class="w-full border rounded px-3 py-2 surface" required />
-        <button class="btn-primary px-4 py-2 rounded w-full">Solicitar cadastro</button>
+        <button id="registerBtn" class="btn-primary px-4 py-2 rounded w-full flex items-center justify-center gap-2">
+          <span id="registerSpinner" class="hidden animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+          <span>Solicitar cadastro</span>
+        </button>
       </form>
       <p id="registerMsg" class="text-sm mt-2 text-center"></p>
-      <p class="text-sm text-center mt-4"><a href="/" class="link">Já possui conta? Entrar</a></p>
+      <p class="text-sm text-center mt-4"><a href="/" class="link">JÃ¡ possui conta? Entrar</a></p>
     </div>
   </main>
   <script src="/static/js/api.js"></script>
@@ -57,9 +60,15 @@
     });
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const f = new FormData(e.target);
+      const form = e.target;
+      const btn = document.getElementById('registerBtn');
+      const spinner = document.getElementById('registerSpinner');
+      const f = new FormData(form);
       const msg = document.getElementById('registerMsg');
       msg.textContent = '';
+      btn.disabled = true;
+      btn.classList.add('opacity-60','cursor-not-allowed');
+      spinner.classList.remove('hidden');
       try {
         const data = await API.post('/api/auth/register', {
           cpf: f.get('cpf'),
@@ -72,6 +81,10 @@
       } catch (err) {
         msg.textContent = err.message;
         msg.className = 'text-sm mt-2 text-center text-red-500';
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-60','cursor-not-allowed');
+        spinner.classList.add('hidden');
       }
     });
   </script>

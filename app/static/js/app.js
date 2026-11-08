@@ -24,6 +24,10 @@ function formatDateTime(iso) {
   return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 }
 
+function skeletonRow(cols) {
+  return '<tr class="animate-pulse"><td colspan="' + cols + '" class="p-4"><div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div></td></tr>';
+}
+
 function statusLabel(s) {
   if (s === 'pending') return 'pendente';
   if (s === 'approved') return 'aprovado';
@@ -44,6 +48,27 @@ function toast(msg, ok = true) {
   t.className = 'fixed bottom-4 right-4 px-4 py-2 rounded shadow text-white ' + (ok ? 'bg-green-600' : 'bg-red-600');
   t.classList.remove('hidden');
   setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+// Loading spinner on buttons
+function setLoading(btn, loading) {
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.classList.add('opacity-70', 'cursor-not-allowed');
+    // esconde ícones existentes enquanto carrega
+    btn.querySelectorAll('i, svg').forEach(el => el.classList.add('hidden'));
+    if (!btn.querySelector('.btn-spinner')) {
+      const sp = document.createElement('span');
+      sp.className = 'btn-spinner animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent inline-block';
+      btn.prepend(sp);
+    }
+  } else {
+    btn.classList.remove('opacity-70', 'cursor-not-allowed');
+    const sp = btn.querySelector('.btn-spinner');
+    if (sp) sp.remove();
+    btn.querySelectorAll('i, svg').forEach(el => el.classList.remove('hidden'));
+  }
 }
 
 // Modal
@@ -159,7 +184,10 @@ function updateAuthUI() {
     const initial = allowed.includes(hashView) ? hashView : defaultView;
     loadPenalties();
     showView(initial, false);
-    if (!allowed.includes(hashView)) location.hash = initial;
+    if (!allowed.includes(hashView)) {
+      window._settingHash = true;
+      location.hash = initial;
+    }
   } else {
     nav.classList.add('hidden');
     logout.classList.add('hidden');
@@ -175,6 +203,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   const f = new FormData(e.target);
   const msg = document.getElementById('loginMsg');
   msg.textContent = '';
+  const btn = document.getElementById('loginBtn');
+  setLoading(btn, true);
   try {
     const data = await API.post('/api/auth/login', {
       username: f.get('username'),
@@ -184,17 +214,23 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     toast('Login realizado');
   } catch (err) {
     msg.textContent = err.message;
+  } finally {
+    setLoading(btn, false);
   }
 });
 
 // Dashboard
 async function loadDashboard() {
   try {
-    const students = await API.get('/api/students');
-    const occs = await API.get('/api/occurrences');
-    const classes = new Set(students.map(s => s.turma));
-    document.getElementById('statStudents').textContent = students.length;
-    document.getElementById('statOcc').textContent = occs.length;
+    if (!allStudents || !allStudents.length) {
+      allStudents = await API.get('/api/students');
+    }
+    if (!allOccurrences || !allOccurrences.length) {
+      allOccurrences = await API.get('/api/occurrences');
+    }
+    const classes = new Set((allStudents || []).map(s => s.turma));
+    document.getElementById('statStudents').textContent = allStudents.length;
+    document.getElementById('statOcc').textContent = allOccurrences.length;
     document.getElementById('statClasses').textContent = classes.size;
   } catch (e) { /* ignore */ }
 }
@@ -218,14 +254,20 @@ let allStudents = [];
 let studentSort = { key: 'nome', dir: 'asc' };
 let studentPage = 1;
 const PAGE_SIZE = 8;
-async function loadStudents() {
+let _studentsInitDone = false;
+async function loadStudents(reload) {
   studentPage = 1;
-  try {
-    const data = await API.get('/api/students');
-    allStudents = data;
-    renderStudents();
-    populateOccTurmas();
-  } catch (e) { toast(e.message, false); }
+  const tbody = document.getElementById('studentsTable');
+  if (!_studentsInitDone || reload) {
+    if (tbody) tbody.innerHTML = skeletonRow(4);
+    try {
+      const data = await API.get('/api/students');
+      allStudents = data;
+      _studentsInitDone = true;
+    } catch (e) { toast(e.message, false); }
+  }
+  renderStudents();
+  populateOccTurmas();
 }
 window.toggleStudentSort = (key) => {
   if (studentSort.key === key) studentSort.dir = studentSort.dir === 'asc' ? 'desc' : 'asc';
@@ -274,23 +316,29 @@ function renderStudents(resetPage) {
 document.getElementById('studentSearch').addEventListener('input', () => renderStudents(true));
 
 window.removeStudent = (id) => {
+  const btn = document.querySelector(`button[onclick="removeStudent(${id})"]`);
   confirmModal('Remover este aluno?', async () => {
+    setLoading(btn, true);
     try {
       await API.del(`/api/students/${id}`);
       toast('Estudante removido');
-      loadStudents();
+      loadStudents(true);
     } catch (e) { toast(e.message, false); }
+    finally { setLoading(btn, false); }
   });
 };
 
 window.editPoints = async (id, current) => {
   const v = prompt('Novo total de pontos formativos:', current);
   if (v === null) return;
+  const btn = document.querySelector(`button[onclick="editPoints(${id}, ...)"]`) || null;
+  setLoading(btn, true);
   try {
     await API.patch(`/api/students/${id}`, { pontos_formativo: parseFloat(v) });
     toast('Atualizado');
-    loadStudents();
+    loadStudents(true);
   } catch (e) { toast(e.message, false); }
+  finally { setLoading(btn, false); }
 };
 window.downloadStudentPdf = (id) => {
   window.open(`/api/students/${id}/occurrences/pdf?token=${API.token}`, '_blank');
@@ -306,13 +354,16 @@ document.getElementById('createStudentForm').addEventListener('submit', async (e
   const letra = f.get('letra');
   if (!nome || !ano || !letra) { toast('Preencha todos os campos', false); return; }
   const turma = ano + letra;
+  const btn = e.target.querySelector('button[type=submit]');
   confirmModal(`Confirmar cadastro do estudante "${nome}" na turma ${turma}?`, async () => {
+    setLoading(btn, true);
     try {
       await API.post('/api/students', { nome, turma });
       e.target.reset();
-      loadStudents();
+      loadStudents(true);
       successModal('Estudante cadastrado com sucesso!');
     } catch (err) { toast(err.message, false); }
+    finally { setLoading(btn, false); }
   });
 });
 
@@ -324,6 +375,8 @@ document.getElementById('bulkForm').addEventListener('submit', async (e) => {
   if (!file || !file.name) { toast('Selecione um CSV', false); return; }
   if (!file.name.toLowerCase().endsWith('.csv')) { toast('Arquivo deve ser .csv', false); return; }
   if (file.size === 0) { toast('Arquivo vazio', false); return; }
+  const btn = e.target.querySelector('button[type=submit]');
+  setLoading(btn, true);
   const fd = new FormData();
   fd.append('file', file);
   try {
@@ -335,12 +388,15 @@ document.getElementById('bulkForm').addEventListener('submit', async (e) => {
     const data = await res.json();
     if (!res.ok) throw new Error(data.msg || 'Erro');
     toast(`Importados: ${data.created}`);
-    loadStudents();
+    loadStudents(true);
   } catch (err) { toast(err.message, false); }
+  finally { setLoading(btn, false); }
 });
 
 // Occurrences
 let allOccurrences = [];
+let _occInitDone = false;
+let _penaltiesInitDone = false;
 async function ensureStudents() {
   if (!allStudents || !allStudents.length) {
     try { allStudents = await API.get('/api/students'); } catch (e) { allStudents = []; }
@@ -415,12 +471,13 @@ function occTypesForRole(role) {
   if (role === 'admin') return ['ATRASO','OUTROS','ADVERTENCIA','SUSPENSAO','OCORRENCIA LEVE','OCORRENCIA MEDIA','OCORRENCIA GRAVE','CELULAR'];
   return gestor;
 }
-async function loadPenalties() {
+async function loadPenalties(reload) {
+  if (_penaltiesInitDone && !reload) return;
   try {
     const data = await API.get('/api/config');
     if (data && data.penalties) {
       OCC_PENALTY = data.penalties;
-      if (window._occTypesLoaded) populateOccTypes();
+      _penaltiesInitDone = true;
     }
   } catch (e) { /* ignore */ }
 }
@@ -477,19 +534,29 @@ function prefillOccDateTime() {
   if (timeInput) timeInput.value = fmtTime;
 }
 
-async function loadOccurrences() {
+async function loadOccurrences(reload) {
   occPage = 1;
-  await loadPenalties();
-  await ensureStudents();
-  populateOccTurmas();
-  populateOccTypes();
-  populateOccStudents(document.getElementById('occTurmaSelect').value);
-  prefillOccDateTime();
+  const tbody = document.getElementById('occTable');
+  const occLoading = document.getElementById('occCardLoading');
+  if (occLoading) occLoading.classList.remove('hidden');
+  if (tbody) tbody.innerHTML = skeletonRow(7);
   try {
-    const data = await API.get('/api/occurrences');
-    allOccurrences = data;
+    await loadPenalties();
+    await ensureStudents();
+    populateOccTurmas();
+    populateOccTypes();
+    populateOccStudents(document.getElementById('occTurmaSelect').value);
+    prefillOccDateTime();
+    if (!_occInitDone || reload) {
+      const data = await API.get('/api/occurrences');
+      allOccurrences = data;
+      _occInitDone = true;
+    }
     renderOccurrences();
   } catch (e) { toast(e.message, false); }
+  finally {
+    if (occLoading) occLoading.classList.add('hidden');
+  }
 }
 function renderOccurrences(resetPage) {
   if (resetPage) occPage = 1;
@@ -557,7 +624,9 @@ document.getElementById('createOccForm').addEventListener('submit', async (e) =>
   const data_hora = `${data}T${hora}:00`;
   const aluno = (allStudents || []).find(s => s.id === student_id);
   const nomeAluno = aluno ? aluno.nome : student_id;
+  const btn = e.target.querySelector('button[type=submit]');
   confirmModal(`Confirmar registro de ocorrência "${tipo}" para ${nomeAluno}?`, async () => {
+    setLoading(btn, true);
     try {
       await API.post('/api/occurrences', { student_id, tipo, descricao, data_hora });
       e.target.reset();
@@ -565,21 +634,25 @@ document.getElementById('createOccForm').addEventListener('submit', async (e) =>
       populateOccTurmas();
       populateOccTypes();
       populateOccStudents('');
-      loadOccurrences();
-      loadStudents();
+      loadOccurrences(true);
+      loadStudents(true);
       successModal('Ocorrência registrada com sucesso!');
     } catch (err) { toast(err.message, false); }
+    finally { setLoading(btn, false); }
   });
 });
 
 window.removeOccurrence = (id) => {
+  const btn = document.querySelector(`button[onclick="removeOccurrence(${id})"]`);
   confirmModal('Remover esta ocorrência?', async () => {
+    setLoading(btn, true);
     try {
       await API.del(`/api/occurrences/${id}`);
       toast('Ocorrência removida');
-      loadOccurrences();
-      loadStudents();
+      loadOccurrences(true);
+      loadStudents(true);
     } catch (e) { toast(e.message, false); }
+    finally { setLoading(btn, false); }
   });
 };
 
@@ -588,6 +661,7 @@ const _btnOccPdf = document.getElementById('loadClassOccPdf');
 if (_btnOccPdf) _btnOccPdf.addEventListener('click', async () => {
   const turma = document.getElementById('className').value.trim();
   if (!turma) { toast('Informe a turma', false); return; }
+  setLoading(_btnOccPdf, true);
   try {
     const res = await fetch(`/api/classes/${encodeURIComponent(turma)}/occurrences/pdf`, {
       headers: { 'Authorization': 'Bearer ' + API.token },
@@ -601,12 +675,14 @@ if (_btnOccPdf) _btnOccPdf.addEventListener('click', async () => {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) { toast(err.message, false); }
+  finally { setLoading(_btnOccPdf, false); }
 });
 
 const _btnPtsPdf = document.getElementById('loadClassPdf');
 if (_btnPtsPdf) _btnPtsPdf.addEventListener('click', async () => {
   const turma = document.getElementById('className').value.trim();
   if (!turma) { toast('Informe a turma', false); return; }
+  setLoading(_btnPtsPdf, true);
   try {
     const res = await fetch(`/api/classes/${encodeURIComponent(turma)}/points/pdf`, {
       headers: { 'Authorization': 'Bearer ' + API.token },
@@ -620,6 +696,7 @@ if (_btnPtsPdf) _btnPtsPdf.addEventListener('click', async () => {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) { toast(err.message, false); }
+  finally { setLoading(_btnPtsPdf, false); }
 });
 
 // Admin
@@ -761,6 +838,8 @@ async function loadConfig() {
 }
 
 document.getElementById('saveConfigBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveConfigBtn');
+  setLoading(btn, true);
   const initial = parseFloat(document.getElementById('cfgInitial').value);
   const penalties = {};
   document.querySelectorAll('#cfgPenalties input[data-penalty]').forEach(inp => {
@@ -769,37 +848,47 @@ document.getElementById('saveConfigBtn').addEventListener('click', async () => {
   try {
     await API.put('/api/admin/config', { initial_points: initial, penalties });
     toast('Configuração salva e pontos recalculados');
-    await loadPenalties();
+    await loadPenalties(true);
     loadConfig();
-    loadStudents();
-    loadOccurrences();
+    loadStudents(true);
+    loadOccurrences(true);
   } catch (err) { toast(err.message, false); }
+  finally { setLoading(btn, false); }
 });
 
 window.changeCargo = async (id, cargo) => {
+  const sel = document.querySelector(`select[onchange="changeCargo(${id}, this.value)"]`);
+  setLoading(sel, true);
   try {
     await API.patch(`/api/admin/users/${id}/cargo`, { cargo });
     toast('Cargo atualizado');
     loadUsers();
   } catch (e) { toast(e.message, false); }
+  finally { setLoading(sel, false); }
 };
 
 window.removeUser = (id) => {
+  const btn = document.querySelector(`button[onclick="removeUser(${id})"]`);
   confirmModal('Remover este usuário?', async () => {
+    setLoading(btn, true);
     try {
       await API.del(`/api/admin/users/${id}`);
       toast('Usuário removido');
       loadUsers();
     } catch (e) { toast(e.message, false); }
+    finally { setLoading(btn, false); }
   });
 };
 
 window.resetPassword = (id) => {
+  const btn = document.querySelector(`button[onclick="resetPassword(${id})"]`);
   confirmModal('Resetar a senha deste usuário para o CPF?', async () => {
+    setLoading(btn, true);
     try {
       await API.post(`/api/admin/users/${id}/reset-password`);
       toast('Senha resetada');
     } catch (e) { toast(e.message, false); }
+    finally { setLoading(btn, false); }
   });
 };
 
@@ -816,18 +905,24 @@ window.approveReq = (id) => {
   `);
   document.getElementById('modalCancel').onclick = closeModal;
   document.getElementById('modalConfirm').onclick = async () => {
+    const btn = document.getElementById('modalConfirm');
     const cargo = document.getElementById('approveCargo').value;
     closeModal();
+    setLoading(btn, true);
     try {
       await API.post(`/api/admin/registration-requests/${id}/approve`, { cargo });
       toast('Aprovado');
       loadRequests();
       loadUsers();
     } catch (e) { toast(e.message, false); }
+    finally { setLoading(btn, false); }
   };
 };
 window.rejectReq = async (id) => {
+  const btn = document.querySelector(`button[onclick="rejectReq(${id})"]`);
+  setLoading(btn, true);
   try { await API.post(`/api/admin/registration-requests/${id}/reject`); toast('Rejeitado'); loadRequests(); } catch (e) { toast(e.message, false); }
+  finally { setLoading(btn, false); }
 };
 
 document.getElementById('createAdminForm').addEventListener('submit', async (e) => {
@@ -845,19 +940,24 @@ document.getElementById('createAdminForm').addEventListener('submit', async (e) 
   `);
   document.getElementById('modalCancel').onclick = closeModal;
   document.getElementById('modalConfirm').onclick = async () => {
+    const btn = document.getElementById('modalConfirm');
     const admin_password = document.getElementById('adminPwdConfirm').value;
     closeModal();
+    setLoading(btn, true);
     try {
       await API.post('/api/admin/users', { username, password, cargo: 'admin', admin_password });
       e.target.reset();
       loadUsers();
       successModal('Usuário criado com sucesso!');
     } catch (err) { toast(err.message, false); }
+    finally { setLoading(btn, false); }
   };
 });
 
 // PDF download with auth via fetch (override downloadStudentPdf)
 window.downloadStudentPdf = async (id) => {
+  const btn = document.querySelector(`button[onclick="downloadStudentPdf(${id})"]`);
+  setLoading(btn, true);
   try {
     const res = await fetch(`/api/students/${id}/occurrences/pdf`, {
       headers: { 'Authorization': 'Bearer ' + API.token },
@@ -871,6 +971,7 @@ window.downloadStudentPdf = async (id) => {
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) { toast(err.message, false); }
+  finally { setLoading(btn, false); }
 };
 
 // Populate turma letters
@@ -887,6 +988,7 @@ window.downloadStudentPdf = async (id) => {
 
 // Hash routing guard
 window.addEventListener('hashchange', () => {
+  if (window._settingHash) { window._settingHash = false; return; }
   const user = currentUser();
   const name = (location.hash || '').replace('#', '');
   if (!user || !API.token) {

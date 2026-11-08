@@ -17,9 +17,13 @@ students_bp = Blueprint("students", __name__, url_prefix="/api")
 @login_required_approved
 def list_students():
     turma = request.args.get("turma")
+    search = request.args.get("search")
     q = Student.query
     if turma:
         q = q.filter_by(turma=turma)
+    if search:
+        like = f"%{search}%".upper()
+        q = q.filter(db.func.upper(Student.nome).like(like) | db.func.upper(Student.turma).like(like))
     return jsonify([s.to_dict() for s in q.all()]), 200
 
 

@@ -10,6 +10,18 @@ from app.utils.decorators import login_required_approved, get_current_user
 from app.config import Config
 from app.services.config_service import get_penalty
 
+
+def recalculate_student_points(student_id):
+    """Recalcula os pontos do aluno baseado em todas as suas ocorrÃªncias."""
+    student = db.session.get(Student, student_id)
+    if student is None:
+        return
+    initial = Config.INITIAL_FORMATIVE_POINTS
+    occs = Occurrence.query.filter_by(student_id=student_id).all()
+    total_discount = sum(occ.pontos_descontados or 0 for occ in occs)
+    student.pontos_formativo = max(0.0, initial - total_discount)
+    db.session.commit()
+
 occurrences_bp = Blueprint("occurrences", __name__, url_prefix="/api")
 
 
@@ -57,15 +69,15 @@ def create_occurrence():
         student_id=student_id,
         registered_by_user_id=user.id,
         cargo_registrador=user.cargo,
-        nome_registrador=user.username,
+        nome_registrador=user.nome_completo or user.username,
         data_hora=data_hora,
         tipo=tipo,
         descricao=descricao,
         pontos_descontados=penalty,
     )
     db.session.add(occ)
-    current = student.pontos_formativo or 0
-    student.pontos_formativo = max(0.0, current - penalty)
+    db.session.flush()
+    recalculate_student_points(student_id)
     db.session.commit()
     return jsonify({"msg": "Ocorrencia registrada", "occurrence": occ.to_dict()}), 201
 
@@ -92,6 +104,12 @@ def list_occurrences():
     return jsonify(result), 200
 
 
+@occurrences_bp.route("/occurrences/count", methods=["GET"])
+@login_required_approved
+def count_occurrences():
+    return jsonify({"count": Occurrence.query.count()}), 200
+
+
 @occurrences_bp.route("/occurrences/<int:occ_id>", methods=["GET"])
 @login_required_approved
 def get_occurrence(occ_id):
@@ -110,9 +128,9 @@ def delete_occurrence(occ_id):
         return jsonify({"msg": "Ocorrencia nao encontrada"}), 404
     if user is None or (user.cargo != "admin" and occ.registered_by_user_id != user.id):
         return jsonify({"msg": "Sem permissao para remover esta ocorrencia"}), 403
-    student = db.session.get(Student, occ.student_id)
-    if student is not None:
-        student.pontos_formativo = (student.pontos_formativo or 0) + (occ.pontos_descontados or 0)
+    student_id = occ.student_id
     db.session.delete(occ)
+    db.session.flush()
+    recalculate_student_points(student_id)
     db.session.commit()
     return jsonify({"msg": "Ocorrencia removida"}), 200

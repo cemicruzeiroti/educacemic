@@ -158,3 +158,20 @@ def update_config():
     db.session.commit()
     recalculate_all_points()
     return jsonify({"msg": "Configuracao atualizada e pontos recalculados"}), 200
+
+
+@admin_bp.route("/recalculate-points", methods=["POST"])
+@roles_required(*Config.ROLES_CREATE_ADMIN)
+def recalculate_all_students_points():
+    from app.models.student import Student
+    from app.models.occurrence import Occurrence
+    from app.config import Config
+    students = Student.query.all()
+    count = 0
+    for s in students:
+        occs = Occurrence.query.filter_by(student_id=s.id).all()
+        total_discount = sum(occ.pontos_descontados or 0 for occ in occs)
+        s.pontos_formativo = max(0.0, Config.INITIAL_FORMATIVE_POINTS - total_discount)
+        count += 1
+    db.session.commit()
+    return jsonify({"msg": f"Pontos recalculados para {count} alunos"}), 200

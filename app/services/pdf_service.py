@@ -18,13 +18,13 @@ def build_occurrences_pdf(student, occurrences):
     elements.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles["Normal"]))
     elements.append(Spacer(1, 12))
 
-    data = [["Data/Hora", "Tipo", "Cargo", "Registrado por", "Descricao", "Pontos"]]
+    data = [["Data/Hora", "Tipo", "Registrado por", "Descricao", "Pontos"]]
     for occ in occurrences:
+        registrado_por = f"{occ.nome_registrador} ({occ.cargo_registrador})"
         data.append([
             occ.data_hora.strftime("%d/%m/%Y %H:%M") if occ.data_hora else "",
             occ.tipo,
-            occ.cargo_registrador,
-            occ.nome_registrador,
+            registrado_por,
             (occ.descricao or "")[:60],
             f"-{occ.pontos_descontados}",
         ])
@@ -59,11 +59,12 @@ def build_class_occurrences_pdf(turma, occurrences):
 
     data = [["Data", "Aluno", "Tipo", "Registrado por", "Descricao"]]
     for occ in occurrences:
+        registrado_por = f"{occ.nome_registrador} ({occ.cargo_registrador})"
         data.append([
             occ.data_hora.strftime("%d/%m/%Y %H:%M") if occ.data_hora else "",
             getattr(occ, "student_nome", "") or "",
             occ.tipo,
-            occ.nome_registrador,
+            registrado_por,
             (occ.descricao or "")[:60],
         ])
 

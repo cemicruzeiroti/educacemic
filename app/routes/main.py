@@ -28,3 +28,17 @@ def public_config():
         "initial_points": get_initial_points(),
         "penalties": get_all_penalties(),
     }), 200
+
+
+@main_bp.route("/api/stats", methods=["GET"])
+@login_required_approved
+def stats():
+    from app.models.student import Student
+    from app.models.occurrence import Occurrence
+    students = Student.query.all()
+    classes = set(s.turma for s in students)
+    return jsonify({
+        "students": len(students),
+        "occurrences": Occurrence.query.count(),
+        "classes": len(classes),
+    }), 200

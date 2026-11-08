@@ -1,4 +1,9 @@
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
 
 
 class Config:
@@ -42,10 +47,10 @@ class Config:
         except Exception:
             pass
 
-    # Força o driver psycopg2 (instalado via psycopg2-binary)
+    # ForÃ§a o driver psycopg2 (instalado via psycopg2-binary)
     if _db_url.startswith("postgresql://"):
         _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-    # Supabase/Postgres exigem SSL em produção (SQLite não aceita sslmode)
+    # Supabase/Postgres exigem SSL em produÃ§Ã£o (SQLite nÃ£o aceita sslmode)
     if _db_url.startswith("postgresql") and "sslmode=" not in _db_url:
         _db_url += ("&" if "?" in _db_url else "?") + "sslmode=require"
     SQLALCHEMY_DATABASE_URI = _db_url
