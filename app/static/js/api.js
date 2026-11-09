@@ -20,6 +20,12 @@ const API = {
     else if (ct.includes('application/pdf')) data = await res.blob();
     else data = await res.text();
     if (!res.ok) {
+      if (res.status === 401) {
+        API.clearToken();
+        if (typeof clearAuth === 'function') clearAuth();
+        toast('Sessão expirada. Faça login novamente.', false);
+        return;
+      }
       const msg = (data && data.msg) ? data.msg : (typeof data === 'string' ? data : res.statusText);
       throw new Error(msg || ('HTTP ' + res.status));
     }
