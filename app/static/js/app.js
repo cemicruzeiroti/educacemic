@@ -267,7 +267,6 @@ async function loadStudents(reload) {
     } catch (e) { toast(e.message, false); }
   }
   renderStudents();
-  populateOccTurmas();
 }
 window.toggleStudentSort = (key) => {
   if (studentSort.key === key) studentSort.dir = studentSort.dir === 'asc' ? 'desc' : 'asc';
@@ -436,18 +435,6 @@ function toggleClassButtons() {
   }
 }
 
-function populateOccTurmas() {
-  const sel = document.getElementById('occTurmaSelect');
-  if (!sel) return;
-  const current = sel.value;
-  sel.innerHTML = '<option value="" disabled selected>Selecione a turma</option>';
-  turmasUnicas().forEach(t => {
-    const o = document.createElement('option');
-    o.value = t; o.textContent = t;
-    sel.appendChild(o);
-  });
-  if (current) sel.value = current;
-}
 function tipoBadgeClass(tipo) {
   if (tipo === 'OCORRENCIA LEVE' || tipo === 'CELULAR') return 'bg-yellow-100 text-yellow-700';
   if (tipo === 'OCORRENCIA MEDIA') return 'bg-orange-100 text-orange-700';
@@ -514,15 +501,49 @@ function populateOccTypes() {
   hidden.value = '';
   label.innerHTML = '<span class="text-muted">Selecione Tipo</span>';
 }
-function populateOccStudents(turma) {
-  const sel = document.getElementById('occStudentSelect');
-  if (!sel) return;
-  sel.innerHTML = '<option value="" disabled selected>Selecione Estudante</option>';
-  (allStudents || []).filter(s => !turma || s.turma === turma).sort((a,b) => a.nome.localeCompare(b.nome)).forEach(s => {
-    const o = document.createElement('option');
-    o.value = s.id; o.textContent = s.nome;
-    sel.appendChild(o);
+function populateOccStudents(search) {
+  const list = document.getElementById('occStudentList');
+  const input = document.getElementById('occStudentInput');
+  const hidden = document.getElementById('occStudentSelect');
+  if (!list || !input || !hidden) return;
+  const q = (search || '').toLowerCase().trim();
+  list.innerHTML = '';
+  // agrupa estudantes por turma
+  const byTurma = {};
+  (allStudents || []).forEach(s => {
+    if (!byTurma[s.turma]) byTurma[s.turma] = [];
+    byTurma[s.turma].push(s);
   });
+  Object.keys(byTurma).sort().forEach(turma => {
+    let alunos = byTurma[turma].sort((a,b) => a.nome.localeCompare(b.nome));
+    if (q) {
+      alunos = alunos.filter(s => s.nome.toLowerCase().includes(q) || turma.toLowerCase().includes(q));
+    }
+    if (alunos.length === 0) return;
+    // grupo da turma
+    const grp = document.createElement('div');
+    grp.className = 'px-3 py-1.5 text-black text-sm font-bold uppercase tracking-wider';
+    grp.textContent = turma;
+    list.appendChild(grp);
+    alunos.forEach(s => {
+      const txt = `${s.nome} (${s.turma})`;
+      const item = document.createElement('div');
+      item.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/30';
+      item.textContent = txt;
+      item.onclick = () => {
+        input.value = txt;
+        hidden.value = s.id;
+        document.getElementById('occStudentDropdown').classList.add('hidden');
+      };
+      list.appendChild(item);
+    });
+  });
+  if (list.children.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'px-3 py-2 text-sm text-muted italic';
+    empty.textContent = 'Nenhum estudante encontrado';
+    list.appendChild(empty);
+  }
 }
 function prefillOccDateTime() {
   const now = new Date();
@@ -543,9 +564,8 @@ async function loadOccurrences(reload) {
   try {
     await loadPenalties();
     await ensureStudents();
-    populateOccTurmas();
     populateOccTypes();
-    populateOccStudents(document.getElementById('occTurmaSelect').value);
+    populateOccStudents('');
     prefillOccDateTime();
     if (!_occInitDone || reload) {
       const data = await API.get('/api/occurrences');
@@ -608,8 +628,27 @@ function renderOccurrences(resetPage) {
 document.getElementById('occFilterBy').addEventListener('change', () => renderOccurrences(true));
 document.getElementById('occSearch').addEventListener('input', () => renderOccurrences(true));
 
-document.getElementById('occTurmaSelect').addEventListener('change', (e) => {
+document.getElementById('occStudentInput').addEventListener('click', () => {
+  const d = document.getElementById('occStudentDropdown');
+  d.classList.toggle('hidden');
+  populateOccStudents('');
+});
+document.getElementById('occStudentInput').addEventListener('input', (e) => {
+  const d = document.getElementById('occStudentDropdown');
+  d.classList.remove('hidden');
   populateOccStudents(e.target.value);
+});
+document.getElementById('occStudentInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.getElementById('occStudentDropdown').classList.add('hidden');
+  }
+});
+// fechar dropdown ao clicar fora
+document.addEventListener('click', (e) => {
+  const wrapper = document.getElementById('studentCustomSelect');
+  if (!wrapper.contains(e.target)) {
+    document.getElementById('occStudentDropdown').classList.add('hidden');
+  }
 });
 
 document.getElementById('createOccForm').addEventListener('submit', async (e) => {
@@ -631,7 +670,6 @@ document.getElementById('createOccForm').addEventListener('submit', async (e) =>
       await API.post('/api/occurrences', { student_id, tipo, descricao, data_hora });
       e.target.reset();
       prefillOccDateTime();
-      populateOccTurmas();
       populateOccTypes();
       populateOccStudents('');
       loadOccurrences(true);
