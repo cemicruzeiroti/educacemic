@@ -160,6 +160,26 @@ def update_config():
     return jsonify({"msg": "Configuracao atualizada e pontos recalculados"}), 200
 
 
+@admin_bp.route("/bimestres", methods=["GET"])
+@roles_required(*Config.ROLES_CREATE_ADMIN)
+def get_bimestres():
+    from app.services.config_service import get_bimestre_dates
+    return jsonify(get_bimestre_dates()), 200
+
+
+@admin_bp.route("/bimestres", methods=["PUT"])
+@roles_required(*Config.ROLES_CREATE_ADMIN)
+def update_bimestres():
+    from app.services.config_service import set_bimestre_dates
+    data = request.get_json() or {}
+    try:
+        set_bimestre_dates(data)
+    except (TypeError, ValueError) as e:
+        return jsonify({"msg": str(e)}), 400
+    db.session.commit()
+    return jsonify({"msg": "Datas dos bimestres atualizadas"}), 200
+
+
 @admin_bp.route("/recalculate-points", methods=["POST"])
 @roles_required(*Config.ROLES_CREATE_ADMIN)
 def recalculate_all_students_points():

@@ -8,7 +8,7 @@ from app.models.occurrence import Occurrence
 from app.models.user import User
 from app.utils.decorators import login_required_approved, get_current_user
 from app.config import Config
-from app.services.config_service import get_penalty
+from app.services.config_service import get_penalty, calcular_bimestre
 
 
 def recalculate_student_points(student_id):
@@ -65,6 +65,7 @@ def create_occurrence():
         data_hora = now_sp
 
     penalty = get_penalty(tipo)
+    bimestre = calcular_bimestre(data_hora.isoformat())
     occ = Occurrence(
         student_id=student_id,
         registered_by_user_id=user.id,
@@ -74,6 +75,7 @@ def create_occurrence():
         tipo=tipo,
         descricao=descricao,
         pontos_descontados=penalty,
+        bimestre=bimestre,
     )
     db.session.add(occ)
     db.session.flush()

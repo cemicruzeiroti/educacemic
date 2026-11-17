@@ -15,6 +15,7 @@ class Occurrence(db.Model):
     tipo = db.Column(db.String(40), nullable=False)
     descricao = db.Column(db.Text, nullable=False)
     pontos_descontados = db.Column(db.Float, nullable=False, default=0.0)
+    bimestre = db.Column(db.Integer, nullable=True)
 
     def to_dict(self):
         return {
@@ -27,4 +28,5 @@ class Occurrence(db.Model):
             "tipo": self.tipo,
             "descricao": self.descricao,
             "pontos_descontados": self.pontos_descontados,
+            "bimestre": self.bimestre,
         }

@@ -1,7 +1,9 @@
 import csv
 import io
+import os
+from werkzeug.utils import secure_filename
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, current_app
 
 from app import db
 from app.models.student import Student
@@ -123,3 +125,45 @@ def student_occurrences_pdf(student_id):
     buf = build_occurrences_pdf(student, occs)
     return send_file(buf, mimetype="application/pdf", as_attachment=True,
                      download_name=f"ocorrencias_{student.id}.pdf")
+
+
+@students_bp.route("/students/<int:student_id>/occurrences/summary", methods=["GET"])
+@login_required_approved
+def student_occurrences_summary(student_id):
+    student = db.session.get(Student, student_id)
+    if student is None:
+        return jsonify({"msg": "Aluno nao encontrado"}), 404
+    occs = Occurrence.query.filter_by(student_id=student_id).all()
+    summary = {}
+    for o in occs:
+        t = o.tipo
+        summary[t] = summary.get(t, 0) + 1
+    return jsonify({
+        "student": {"id": student.id, "nome": student.nome, "turma": student.turma},
+        "summary": summary,
+        "total": len(occs),
+    }), 200
+
+
+@students_bp.route("/students/<int:student_id>/photo", methods=["POST"])
+@roles_required(*Config.ROLES_MANAGE_STUDENTS)
+def upload_student_photo(student_id):
+    student = db.session.get(Student, student_id)
+    if student is None:
+        return jsonify({"msg": "Aluno nao encontrado"}), 404
+    if "file" not in request.files:
+        return jsonify({"msg": "Nenhum arquivo enviado"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"msg": "Arquivo invalido"}), 400
+
+    photos_dir = os.path.join(current_app.root_path, "static", "photos")
+    os.makedirs(photos_dir, exist_ok=True)
+
+    ext = os.path.splitext(secure_filename(file.filename))[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png", ".webp"):
+        return jsonify({"msg": "Formato invalido. Use JPG, PNG ou WEBP"}), 400
+
+    filename = f"{student_id}.jpg"
+    file.save(os.path.join(photos_dir, filename))
+    return jsonify({"msg": "Foto salva com sucesso", "photo_url": f"/static/photos/{filename}"}), 200

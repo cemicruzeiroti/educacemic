@@ -293,6 +293,7 @@ function renderStudents(resetPage) {
   const tbody = document.getElementById('studentsTable');
   tbody.innerHTML = pageData.map(s => `
     <tr class="border-t hover:bg-gray-100 dark:hover:bg-gray-700">
+      <td class="p-2">${s.id}</td>
       <td class="p-2">${s.nome}</td>
       <td class="p-2">${s.turma}</td>
       <td class="p-2">${s.pontos_formativo}</td>
@@ -301,6 +302,9 @@ function renderStudents(resetPage) {
           <button onclick="downloadStudentPdf(${s.id})" title="Gerar relatório de ocorrências" class="inline-flex items-center gap-1 px-2 py-1 rounded border surface text-xs text-blue-600 hover:text-blue-800">
             <i data-lucide="file-text" class="w-4 h-4"></i>
             PDF
+          </button>
+          <button onclick="viewStudent(${s.id})" title="Ver foto e relatorio do estudante" class="inline-flex items-center gap-1 px-2 py-1 rounded border surface text-xs text-blue-600 hover:text-blue-800">
+            <i data-lucide="eye" class="w-4 h-4"></i>
           </button>
           <button onclick="removeStudent(${s.id})" title="Remover Estudante" class="text-red-600 hover:text-red-800">
             <i data-lucide="minus-circle" class="w-4 h-4"></i>
@@ -343,6 +347,86 @@ window.downloadStudentPdf = (id) => {
   window.open(`/api/students/${id}/occurrences/pdf?token=${API.token}`, '_blank');
   // fetch with auth instead:
 };
+
+const OCC_COLOR_MAP = {
+  'ATRASO': 'bg-gray-100 text-gray-700',
+  'OUTROS': 'bg-gray-100 text-gray-700',
+  'ADVERTENCIA': 'bg-red-100 text-red-700',
+  'SUSPENSAO': 'bg-red-100 text-red-700',
+  'OCORRENCIA LEVE': 'bg-yellow-100 text-yellow-700',
+  'OCORRENCIA MEDIA': 'bg-orange-100 text-orange-700',
+  'OCORRENCIA GRAVE': 'bg-red-100 text-red-700',
+  'CELULAR': 'bg-yellow-100 text-yellow-700',
+};
+
+async function viewStudent(id) {
+  currentStudentId = id;
+  try {
+    const res = await API.get(`/api/students/${id}/occurrences/summary`);
+    const { student, summary, total } = res;
+    document.getElementById('studentViewNome').textContent = student.nome;
+    document.getElementById('studentViewTurma').textContent = student.turma;
+    document.getElementById('studentViewFoto').src = `/static/photos/${student.id}.jpg?t=` + Date.now();
+    document.getElementById('studentViewFoto').onerror = function() {
+      this.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(student.nome) + '&background=random&size=512';
+    };
+    const list = document.getElementById('studentViewOcorrencias');
+    list.innerHTML = '';
+    if (!summary || Object.keys(summary).length === 0) {
+      list.innerHTML = '<div class="text-sm text-muted italic px-3 py-2">Nenhuma ocorrência registrada</div>';
+    } else {
+      Object.entries(summary).forEach(([tipo, qtd]) => {
+        const badge = OCC_COLOR_MAP[tipo] || 'bg-gray-100 text-gray-700';
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between px-3 py-2 border rounded bg-white dark:bg-gray-800';
+        div.innerHTML = '<span class="text-sm">' + tipo + '</span><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ' + badge + '">' + qtd + '</span>';
+        list.appendChild(div);
+      });
+    }
+    document.getElementById('studentViewTotal').textContent = 'Total de ocorrências: ' + total;
+    document.getElementById('studentViewModal').classList.remove('hidden');
+    document.getElementById('studentViewModal').classList.add('flex');
+  } catch (e) {
+    toast(e.message, false);
+  }
+}
+
+let currentStudentId = null;
+
+function closeStudentView() {
+  document.getElementById('studentViewModal').classList.add('hidden');
+  document.getElementById('studentViewModal').classList.remove('flex');
+}
+
+// Upload de foto: dispara automaticamente ao selecionar arquivo
+document.getElementById('studentViewFotoInput').addEventListener('change', async () => {
+  const input = document.getElementById('studentViewFotoInput');
+  if (!input.files || input.files.length === 0) return;
+  const fd = new FormData();
+  fd.append('file', input.files[0]);
+  const btn = document.querySelector('label[for="studentViewFotoInput"]');
+  setLoading(btn, true);
+  try {
+    const res = await fetch(`/api/students/${currentStudentId}/photo`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + API.token },
+      body: fd,
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.msg || 'Erro ao enviar foto');
+    }
+    const data = await res.json();
+    toast('Foto enviada com sucesso');
+    input.value = '';
+    const img = document.getElementById('studentViewFoto');
+    img.src = data.photo_url + '?t=' + Date.now();
+  } catch (e) {
+    toast(e.message, false);
+  } finally {
+    setLoading(btn, false);
+  }
+});
 
 // create student
 document.getElementById('createStudentForm').addEventListener('submit', async (e) => {
@@ -446,6 +530,33 @@ let OCC_PENALTY = {
   'OCORRENCIA LEVE': 0.1, 'OCORRENCIA MEDIA': 0.2, 'OCORRENCIA GRAVE': 0.3,
   'CELULAR': 0.1,
 };
+
+// Datas dos bimestres (carregadas do backend)
+let bimestreDates = {
+  bimestre_1_inicio: '', bimestre_1_fim: '',
+  bimestre_2_inicio: '', bimestre_2_fim: '',
+  bimestre_3_inicio: '', bimestre_3_fim: '',
+  bimestre_4_inicio: '', bimestre_4_fim: '',
+};
+
+function calcularBimestreFrontend(dataHoraStr) {
+  if (!dataHoraStr || !bimestreDates) return null;
+  try {
+    const data = new Date(dataHoraStr + 'T00:00:00');
+    for (let i = 1; i <= 4; i++) {
+      const inicio = bimestreDates[`bimestre_${i}_inicio`];
+      const fim = bimestreDates[`bimestre_${i}_fim`];
+      if (inicio && fim) {
+        const dInicio = new Date(inicio + 'T00:00:00');
+        const dFim = new Date(fim + 'T23:59:59');
+        if (data >= dInicio && data <= dFim) return i;
+      }
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
 const OCC_COLOR_DOT = {
   'ATRASO': '⚪', 'OUTROS': '⚪',
   'ADVERTENCIA': '🔴', 'SUSPENSAO': '🔴',
@@ -563,7 +674,10 @@ async function loadOccurrences(reload) {
   if (tbody) tbody.innerHTML = skeletonRow(7);
   try {
     await loadPenalties();
-    await ensureStudents();
+    // Só carrega alunos se ainda não temos em cache
+    if (!allStudents || !allStudents.length) {
+      await ensureStudents();
+    }
     populateOccTypes();
     populateOccStudents('');
     prefillOccDateTime();
@@ -613,6 +727,7 @@ function renderOccurrences(resetPage) {
       <td class="p-2">${o.data_hora ? new Date(o.data_hora).toLocaleString('pt-BR') : ''}</td>
       <td class="p-2">${o.student_nome || o.student_id}</td>
       <td class="p-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass(o.tipo)}">${displayType(o.tipo)}</span></td>
+      <td class="p-2">${o.bimestre ? `B${o.bimestre}` : '-'}</td>
       <td class="p-2">${o.nome_registrador} (${o.cargo_registrador})</td>
       <td class="p-2">${o.descricao}</td>
       <td class="p-2">
@@ -770,8 +885,8 @@ function updateReqBadge(count) {
   }
 }
 
-const adminBlockIds = { create: 'blkCreateAdmin', students: 'blkStudents', requests: 'blkRequests', config: 'blkConfig', users: 'blkUsers' };
-const adminTitles = { create: 'Criar Admin', students: 'Estudantes', requests: 'Solicitações de Cadastro', config: 'Configuração de Pontos Formativos', users: 'Usuários Cadastrados' };
+const adminBlockIds = { create: 'blkCreateAdmin', students: 'blkStudents', requests: 'blkRequests', config: 'blkConfig', bimestres: 'blkBimestres', users: 'blkUsers' };
+const adminTitles = { create: 'Criar Admin', students: 'Estudantes', requests: 'Solicitações de Cadastro', config: 'Configuração de Pontos Formativos', bimestres: 'Configurar Bimestres', users: 'Usuários Cadastrados' };
 let currentAdminBlock = null;
 function openAdminModal(key) {
   const block = document.getElementById(adminBlockIds[key]);
@@ -799,6 +914,7 @@ function openAdminModal(key) {
   if (key === 'requests') loadRequests();
   if (key === 'config') loadConfig();
   if (key === 'users') loadUsers();
+  if (key === 'bimestres') loadBimestres();
   if (window.lucide) lucide.createIcons();
 }
 function closeAdminModal() {
@@ -875,6 +991,19 @@ async function loadConfig() {
   } catch (e) { toast(e.message, false); }
 }
 
+async function loadBimestres() {
+  try {
+    const data = await API.get('/api/admin/bimestres');
+    if (data) {
+      bimestreDates = data;
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`bim${i}Inicio`).value = data[`bimestre_${i}_inicio`] || '';
+        document.getElementById(`bim${i}Fim`).value = data[`bimestre_${i}_fim`] || '';
+      }
+    }
+  } catch (e) { toast(e.message, false); }
+}
+
 document.getElementById('saveConfigBtn').addEventListener('click', async () => {
   const btn = document.getElementById('saveConfigBtn');
   setLoading(btn, true);
@@ -890,6 +1019,21 @@ document.getElementById('saveConfigBtn').addEventListener('click', async () => {
     loadConfig();
     loadStudents(true);
     loadOccurrences(true);
+  } catch (err) { toast(err.message, false); }
+  finally { setLoading(btn, false); }
+});
+
+document.getElementById('saveBimestresBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveBimestresBtn');
+  setLoading(btn, true);
+  const data = {};
+  for (let i = 1; i <= 4; i++) {
+    data[`bimestre_${i}_inicio`] = document.getElementById(`bim${i}Inicio`).value;
+    data[`bimestre_${i}_fim`] = document.getElementById(`bim${i}Fim`).value;
+  }
+  try {
+    await API.put('/api/admin/bimestres', data);
+    toast('Datas dos bimestres salvas');
   } catch (err) { toast(err.message, false); }
   finally { setLoading(btn, false); }
 });
@@ -1065,3 +1209,19 @@ document.addEventListener('click', (e) => {
 
 // Init
 updateAuthUI();
+loadBimestres();
+
+// Calcular bimestre dinamicamente quando a data muda
+document.getElementById('occDataInput')?.addEventListener('change', (e) => {
+  const dataStr = e.target.value;
+  if (!dataStr) return;
+  const horaInput = document.querySelector('#createOccForm input[name=hora]');
+  const hora = horaInput ? horaInput.value : '00:00';
+  const dataHoraStr = `${dataStr}T${hora}:00`;
+  const bimestre = calcularBimestreFrontend(dataHoraStr);
+  const display = document.getElementById('occBimestreDisplay');
+  if (display) {
+    display.value = bimestre ? `B${bimestre}` : 'Não definido';
+    display.className = 'border rounded px-3 py-2 surface w-full ' + (bimestre ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700');
+  }
+});
