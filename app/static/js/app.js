@@ -1209,7 +1209,6 @@ document.addEventListener('click', (e) => {
 
 // Init
 updateAuthUI();
-loadBimestres();
 
 // Calcular bimestre dinamicamente quando a data muda
 document.getElementById('occDataInput')?.addEventListener('change', (e) => {
