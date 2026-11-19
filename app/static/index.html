@@ -315,7 +315,7 @@
               <input id="bim4Fim" type="date" class="border rounded px-3 py-2 surface w-full" />
             </div>
           </div>
-          <button id="saveBimestresBtn" class="btn-primary px-4 py-2 rounded w-full mt-3">Salvar Datas dos Bimestres</button>
+          <button id="saveBimestresBtn" class="btn-primary px-4 py-2 rounded w-full mt-3">Salvar Datas</button>
         </div>
         <div id="blkUsers">
           <div class="mb-2">
@@ -365,6 +365,18 @@
           <div class="flex-1 min-w-0">
             <h2 id="studentViewNome" class="text-xl font-bold mb-2"></h2>
             <p class="text-muted text-sm mb-4">Turma: <span id="studentViewTurma" class="font-medium"></span></p>
+            <!-- Select de bimestre -->
+            <div class="flex items-center gap-3 mb-4">
+              <label class="text-sm text-muted font-medium">Bimestre:</label>
+              <select id="studentViewBimestre" class="border rounded px-3 py-1 surface text-sm w-24">
+                <option value="">Todos</option>
+                <option value="1">1°</option>
+                <option value="2">2°</option>
+                <option value="3">3°</option>
+                <option value="4">4°</option>
+              </select>
+              <span id="studentViewBimestreInfo" class="text-xs text-muted ml-2"></span>
+            </div>
             <div id="studentViewOcorrencias" class="space-y-2"></div>
             <p id="studentViewTotal" class="mt-4 text-sm font-medium"></p>
           </div>
@@ -376,6 +388,6 @@
   <div id="toast" class="fixed bottom-4 right-4 px-4 py-2 rounded shadow hidden"></div>
 
   <script src="/static/js/api.js?v=4"></script>
-  <script src="/static/js/app.js?v=29"></script>
+  <script src="/static/js/app.js?v=36"></script>
 </body>
 </html>
