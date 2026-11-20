@@ -759,8 +759,11 @@ async function viewStudent(id) {
 
 
     // Carregar datas dos bimestres se ainda nao tiverem sido carregadas
+
     if (!bimestreDates || Object.values(bimestreDates).every(v => !v)) {
+
       await loadBimestres();
+
     }
 
     // Calcular bimestre corrente baseado na data atual
@@ -799,47 +802,95 @@ async function viewStudent(id) {
 
 
 
-    // Preencher select de bimestre
+    // Preencher checkboxes de bimestre
 
-    const sel = document.getElementById('studentViewBimestre');
+    const chk0 = document.getElementById('studentViewBim0');
 
-    const info = document.getElementById('studentViewBimestreInfo');
+    const chk1 = document.getElementById('studentViewBim1');
 
-    sel.value = '';
+    const chk2 = document.getElementById('studentViewBim2');
 
-    info.textContent = '';
+    const chk3 = document.getElementById('studentViewBim3');
+
+    const chk4 = document.getElementById('studentViewBim4');
 
 
+
+    // Marcar todos por default, ou apenas o bimestre corrente
 
     if (currentBim) {
 
-      sel.value = currentBim.toString();
+      chk0.checked = false;
 
-      
+      chk1.checked = currentBim === 1;
 
-      info.className = 'text-xs text-blue-600 ml-2 font-medium';
+      chk2.checked = currentBim === 2;
+
+      chk3.checked = currentBim === 3;
+
+      chk4.checked = currentBim === 4;
 
     } else {
 
-      info.className = 'text-xs text-muted ml-2';
+      chk0.checked = true;
+
+      chk1.checked = false;
+
+      chk2.checked = false;
+
+      chk3.checked = false;
+
+      chk4.checked = false;
 
     }
 
 
 
-    // Funcao para renderizar ocorrencias filtradas por bimestre
+    // Funcao para renderizar ocorrencias filtradas pelos bimestres selecionados
 
-    function renderOccsByBim(bim) {
+    function renderOccsByBim() {
 
       const list = document.getElementById('studentViewOcorrencias');
 
       list.innerHTML = '';
 
+      const bims = [];
+
+      if (chk0.checked) {
+
+        // Todos marcados - mostra todas as ocorrencias
+
+        bims.length = 0;
+
+      } else {
+
+        if (chk1.checked) bims.push(1);
+
+        if (chk2.checked) bims.push(2);
+
+        if (chk3.checked) bims.push(3);
+
+        if (chk4.checked) bims.push(4);
+
+      }
+
+      // Nenhum bimestre selecionado
+
+      if (!chk0.checked && bims.length === 0) {
+
+        list.innerHTML = '<div class="text-sm text-muted italic px-3 py-2">Selecione um bimestre.</div>';
+
+        document.getElementById('studentViewTotal').textContent = 'Total de ocorrências: 0';
+
+        return;
+
+      }
+
       let filtered = allOccs;
 
-      if (bim) {
+      if (bims.length > 0) {
 
-        filtered = allOccs.filter(o => o.bimestre == bim);
+        filtered = allOccs.filter(o => bims.includes(o.bimestre));
 
       }
 
@@ -881,21 +932,101 @@ async function viewStudent(id) {
 
     }
 
+    // Funcao para sincronizar checkbox "Todos" com os individuais
 
+    function updateTodosCheckbox() {
 
-    // Evento de change no select
+      const anyChecked = chk1.checked || chk2.checked || chk3.checked || chk4.checked;
 
-    sel.addEventListener('change', () => {
+      const allChecked = chk1.checked && chk2.checked && chk3.checked && chk4.checked;
 
-      renderOccsByBim(sel.value || '');
+      if (anyChecked && !allChecked) {
+
+        chk0.checked = false;
+
+      } else if (allChecked) {
+
+        chk0.checked = true;
+
+      }
+
+    }
+
+    // Eventos de change nos checkboxes individuais
+
+    chk1.addEventListener('change', function() {
+
+      if (this.checked) chk0.checked = false;
+
+      updateTodosCheckbox();
+
+      renderOccsByBim();
 
     });
 
+    chk2.addEventListener('change', function() {
 
+      if (this.checked) chk0.checked = false;
 
-    // Renderizar com o bimestre corrente (ou todos se nao houver)
+      updateTodosCheckbox();
 
-    renderOccsByBim(currentBim || '');
+      renderOccsByBim();
+
+    });
+
+    chk3.addEventListener('change', function() {
+
+      if (this.checked) chk0.checked = false;
+
+      updateTodosCheckbox();
+
+      renderOccsByBim();
+
+    });
+
+    chk4.addEventListener('change', function() {
+
+      if (this.checked) chk0.checked = false;
+
+      updateTodosCheckbox();
+
+      renderOccsByBim();
+
+    });
+
+    // Evento de change no checkbox "Todos"
+
+    chk0.addEventListener('change', function() {
+
+      if (chk0.checked) {
+
+        chk1.checked = true;
+
+        chk2.checked = true;
+
+        chk3.checked = true;
+
+        chk4.checked = true;
+
+      } else {
+
+        chk1.checked = false;
+
+        chk2.checked = false;
+
+        chk3.checked = false;
+
+        chk4.checked = false;
+
+      }
+
+      renderOccsByBim();
+
+    });
+
+    // Renderizar com o(s) bimestre(s) selecionado(s)
+
+    renderOccsByBim();
 
 
 
@@ -913,11 +1044,7 @@ async function viewStudent(id) {
 
   }
 
-}
-
-
-
-let currentStudentId = null;
+}let currentStudentId = null;
 
 
 
@@ -2409,40 +2536,62 @@ document.getElementById('createAdminForm').addEventListener('submit', async (e) 
 
 // PDF download with auth via fetch (override downloadStudentPdf)
 
-window.downloadStudentPdf = async (id) => {
+// Variável para armazenar o bimestre selecionado no PDF
+let pdfBimestreSelected = '';
 
+function openPdfBimestreModal(id) {
   const btn = document.querySelector(`button[onclick="downloadStudentPdf(${id})"]`);
+  setLoading(btn, false);
+  const modal = document.getElementById('pdfBimestreModal');
+  const select = document.getElementById('pdfBimestreSelect');
+  select.value = '';
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+  document.getElementById('pdfBimestreOk').onclick = () => {
+    const val = select.value;
+    if (!val) {
+      toast('Selecione um bimestre.', false);
+      return;
+    }
+    pdfBimestreSelected = val;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    generateStudentPdf(id, pdfBimestreSelected);
+  };
+  document.getElementById('pdfBimestreCancel').onclick = () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    setLoading(btn, false);
+  };
+}
 
+async function generateStudentPdf(id, bimestre) {
+  const btn = document.querySelector(`button[onclick="downloadStudentPdf(${id})"]`);
   setLoading(btn, true);
-
   try {
-
-    const res = await fetch(`/api/students/${id}/occurrences/pdf`, {
-
+    const url = bimestre && bimestre !== 'all'
+      ? `/api/students/${id}/occurrences/pdf?bimestre=${bimestre}&token=${API.token}`
+      : `/api/students/${id}/occurrences/pdf?token=${API.token}`;
+    const res = await fetch(url, {
       headers: { 'Authorization': 'Bearer ' + API.token },
-
     });
-
     if (!res.ok) throw new Error('Erro ao gerar PDF');
-
     const blob = await res.blob();
-
-    const url = URL.createObjectURL(blob);
-
+    const urlObj = URL.createObjectURL(blob);
     const a = document.createElement('a');
-
-    a.href = url;
-
+    a.href = urlObj;
     a.download = `ocorrencias_${id}.pdf`;
-
     a.click();
+    URL.revokeObjectURL(urlObj);
+  } catch (err) {
+    toast(err.message, false);
+  } finally {
+    setLoading(btn, false);
+  }
+}
 
-    URL.revokeObjectURL(url);
-
-  } catch (err) { toast(err.message, false); }
-
-  finally { setLoading(btn, false); }
-
+window.downloadStudentPdf = async (id) => {
+  openPdfBimestreModal(id);
 };
 
 

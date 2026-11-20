@@ -121,7 +121,11 @@ def student_occurrences_pdf(student_id):
     student = db.session.get(Student, student_id)
     if student is None:
         return jsonify({"msg": "Aluno nao encontrado"}), 404
-    occs = Occurrence.query.filter_by(student_id=student_id).order_by(Occurrence.data_hora.desc()).all()
+    bimestre = request.args.get("bimestre")
+    q = Occurrence.query.filter_by(student_id=student_id)
+    if bimestre and bimestre != "all":
+        q = q.filter_by(bimestre=bimestre)
+    occs = q.order_by(Occurrence.data_hora.desc()).all()
     buf = build_occurrences_pdf(student, occs)
     return send_file(buf, mimetype="application/pdf", as_attachment=True,
                      download_name=f"ocorrencias_{student.id}.pdf")
