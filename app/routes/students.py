@@ -64,10 +64,15 @@ def bulk_students():
     rows = list(reader)
     total = len(rows)
 
+    # Pre-carregar estudantes existentes em um set para evitar queries por linha
+    existing_pairs = set((s.turma, s.nome) for s in Student.query.with_entities(Student.turma, Student.nome).all())
+
     def generate():
         created = 0
         errors = []
         seen = set()
+        batch = []
+        BATCH_SIZE = 50
         for i, row in enumerate(rows, start=1):
             nome = (row.get("nome") or row.get("name") or "").strip().upper()
             turma = (row.get("turma") or row.get("class") or "").strip()
@@ -76,22 +81,30 @@ def bulk_students():
                 errors.append({"line": line_num, "msg": "nome/turma ausentes"})
             elif (turma, nome) in seen:
                 errors.append({"line": line_num, "msg": "Aluno duplicado no arquivo"})
+            elif (turma, nome) in existing_pairs:
+                errors.append({"line": line_num, "msg": "Aluno ja cadastrado nesta turma"})
             else:
-                existing = Student.query.filter_by(turma=turma, nome=nome).first()
-                if existing is not None:
-                    errors.append({"line": line_num, "msg": "Aluno ja cadastrado nesta turma"})
-                else:
-                    seen.add((turma, nome))
-                    student = Student(nome=nome, turma=turma, pontos_formativo=Config.INITIAL_FORMATIVE_POINTS)
-                    db.session.add(student)
-                    created += 1
-            db.session.flush()
+                seen.add((turma, nome))
+                existing_pairs.add((turma, nome))
+                student = Student(nome=nome, turma=turma, pontos_formativo=Config.INITIAL_FORMATIVE_POINTS)
+                batch.append(student)
+                created += 1
+                if len(batch) >= BATCH_SIZE:
+                    db.session.add_all(batch)
+                    db.session.flush()
+                    batch = []
             yield json.dumps({"current": i, "total": total, "created": created, "errors": len(errors)}) + "\n"
+        if batch:
+            db.session.add_all(batch)
+            db.session.flush()
         db.session.commit()
         yield json.dumps({"done": True, "created": created, "errors": errors}) + "\n"
 
     from flask import Response, stream_with_context
-    return Response(stream_with_context(generate()), mimetype="application/x-ndjson")
+    resp = Response(stream_with_context(generate()), mimetype="application/x-ndjson")
+    resp.headers["X-Accel-Buffering"] = "no"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
 
 
 @students_bp.route("/students/<int:student_id>", methods=["PATCH"])
