@@ -144,7 +144,10 @@ def update_config():
     data = request.get_json() or {}
     if "initial_points" in data:
         try:
-            SystemConfig.set("initial_points", float(data["initial_points"]))
+            val = float(data["initial_points"])
+            if val < 0:
+                return jsonify({"msg": "initial_points deve ser positivo"}), 400
+            SystemConfig.set("initial_points", val)
         except (TypeError, ValueError):
             return jsonify({"msg": "initial_points invalido"}), 400
     penalties = data.get("penalties") or {}
@@ -152,7 +155,10 @@ def update_config():
         if tipo not in Config.OCCURRENCE_PENALTIES:
             continue
         try:
-            SystemConfig.set(f"penalty_{tipo}", float(val))
+            v = float(val)
+            if v < 0:
+                return jsonify({"msg": f"penalidade {tipo} deve ser positiva"}), 400
+            SystemConfig.set(f"penalty_{tipo}", v)
         except (TypeError, ValueError):
             return jsonify({"msg": f"penalidade invalida: {tipo}"}), 400
     db.session.commit()

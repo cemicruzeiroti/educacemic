@@ -23,3 +23,18 @@ body { background: var(--bg); color: var(--text); }
 .btn-primary:hover { background: var(--brand-dark); }
 .link { color: var(--brand); }
 .nav-active { background: var(--brand); color: #fff; }
+
+/* Spinner de carregamento para botões */
+.btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

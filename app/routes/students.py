@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 import os
 from werkzeug.utils import secure_filename
 
@@ -60,28 +61,37 @@ def bulk_students():
 
     stream = io.StringIO(f.stream.read().decode("utf-8-sig"), newline=None)
     reader = csv.DictReader(stream)
-    created = 0
-    errors = []
-    seen = set()
-    for i, row in enumerate(reader, start=2):
-        nome = (row.get("nome") or row.get("name") or "").strip().upper()
-        turma = (row.get("turma") or row.get("class") or "").strip()
-        if not nome or not turma:
-            errors.append({"line": i, "msg": "nome/turma ausentes"})
-            continue
-        if (turma, nome) in seen:
-            errors.append({"line": i, "msg": "Aluno duplicado no arquivo"})
-            continue
-        existing = Student.query.filter_by(turma=turma, nome=nome).first()
-        if existing is not None:
-            errors.append({"line": i, "msg": "Aluno ja cadastrado nesta turma"})
-            continue
-        seen.add((turma, nome))
-        student = Student(nome=nome, turma=turma, pontos_formativo=Config.INITIAL_FORMATIVE_POINTS)
-        db.session.add(student)
-        created += 1
-    db.session.commit()
-    return jsonify({"msg": "Importacao concluida", "created": created, "errors": errors}), 200
+    rows = list(reader)
+    total = len(rows)
+
+    def generate():
+        created = 0
+        errors = []
+        seen = set()
+        for i, row in enumerate(rows, start=1):
+            nome = (row.get("nome") or row.get("name") or "").strip().upper()
+            turma = (row.get("turma") or row.get("class") or "").strip()
+            line_num = i + 1
+            if not nome or not turma:
+                errors.append({"line": line_num, "msg": "nome/turma ausentes"})
+            elif (turma, nome) in seen:
+                errors.append({"line": line_num, "msg": "Aluno duplicado no arquivo"})
+            else:
+                existing = Student.query.filter_by(turma=turma, nome=nome).first()
+                if existing is not None:
+                    errors.append({"line": line_num, "msg": "Aluno ja cadastrado nesta turma"})
+                else:
+                    seen.add((turma, nome))
+                    student = Student(nome=nome, turma=turma, pontos_formativo=Config.INITIAL_FORMATIVE_POINTS)
+                    db.session.add(student)
+                    created += 1
+            db.session.flush()
+            yield json.dumps({"current": i, "total": total, "created": created, "errors": len(errors)}) + "\n"
+        db.session.commit()
+        yield json.dumps({"done": True, "created": created, "errors": errors}) + "\n"
+
+    from flask import Response, stream_with_context
+    return Response(stream_with_context(generate()), mimetype="application/x-ndjson")
 
 
 @students_bp.route("/students/<int:student_id>", methods=["PATCH"])
@@ -113,6 +123,16 @@ def delete_student(student_id):
     db.session.delete(student)
     db.session.commit()
     return jsonify({"msg": "Aluno removido"}), 200
+
+
+@students_bp.route("/students", methods=["DELETE"])
+@roles_required(*Config.ROLES_MANAGE_STUDENTS)
+def delete_all_students():
+    Occurrence.query.delete()
+    count = Student.query.count()
+    Student.query.delete()
+    db.session.commit()
+    return jsonify({"msg": f"{count} estudante(s) removido(s) com sucesso", "deleted": count}), 200
 
 
 @students_bp.route("/students/<int:student_id>/occurrences/pdf", methods=["GET"])
@@ -171,3 +191,5 @@ def upload_student_photo(student_id):
     filename = f"{student_id}.jpg"
     file.save(os.path.join(photos_dir, filename))
     return jsonify({"msg": "Foto salva com sucesso", "photo_url": f"/static/photos/{filename}"}), 200
+
+

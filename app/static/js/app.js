@@ -84,24 +84,6 @@ function statusBadgeClass(s) {
 
 
 
-// Toast
-
-function toast(msg, ok = true) {
-
-  const t = document.getElementById('toast');
-
-  t.textContent = msg;
-
-  t.className = 'fixed bottom-4 right-4 px-4 py-2 rounded shadow text-white ' + (ok ? 'bg-green-600' : 'bg-red-600');
-
-  t.classList.remove('hidden');
-
-  setTimeout(() => t.classList.add('hidden'), 3000);
-
-}
-
-
-
 // Loading spinner on buttons
 
 function setLoading(btn, loading) {
@@ -122,7 +104,11 @@ function setLoading(btn, loading) {
 
       const sp = document.createElement('span');
 
-      sp.className = 'btn-spinner animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent inline-block';
+      // NÃO usar classe animate-spin do Tailwind (não funciona em elementos dinâmicos)
+
+      // Usar apenas classes do theme.css que têm animação própria
+
+      sp.className = 'btn-spinner rounded-full h-4 w-4 border-2 border-current border-t-transparent inline-block';
 
       btn.prepend(sp);
 
@@ -205,6 +191,24 @@ function successModal(message) {
     <div class="flex flex-col items-center gap-3">
 
       <i data-lucide="check-circle" class="w-12 h-12 text-green-500"></i>
+
+      <p class="font-medium">${message}</p>
+
+    </div>
+
+  `);
+
+  setTimeout(() => closeModal(), 1000);
+
+}
+
+function errorModal(message) {
+
+  openModal(`
+
+    <div class="flex flex-col items-center gap-3">
+
+      <i data-lucide="x-circle" class="w-12 h-12 text-red-500"></i>
 
       <p class="font-medium">${message}</p>
 
@@ -392,7 +396,7 @@ function updateAuthUI() {
 
 }
 
-document.getElementById('logoutBtn').addEventListener('click', () => { clearAuth(); toast('Saiu'); });
+document.getElementById('logoutBtn').addEventListener('click', () => { clearAuth(); successModal('Saiu'); });
 
 
 
@@ -424,7 +428,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     setAuth(data.access_token, data.user);
 
-    toast('Login realizado');
+    successModal('Login realizado');
 
   } catch (err) {
 
@@ -530,7 +534,7 @@ async function loadStudents(reload) {
 
       _studentsInitDone = true;
 
-    } catch (e) { toast(e.message, false); }
+    } catch (e) { errorModal(e.message); }
 
   }
 
@@ -652,11 +656,11 @@ window.removeStudent = (id) => {
 
       await API.del(`/api/students/${id}`);
 
-      toast('Estudante removido');
+      successModal('Estudante removido');
 
       loadStudents(true);
 
-    } catch (e) { toast(e.message, false); }
+    } catch (e) { errorModal(e.message); }
 
     finally { setLoading(btn, false); }
 
@@ -680,11 +684,11 @@ window.editPoints = async (id, current) => {
 
     await API.patch(`/api/students/${id}`, { pontos_formativo: parseFloat(v) });
 
-    toast('Atualizado');
+    successModal('Atualizado');
 
     loadStudents(true);
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
   finally { setLoading(btn, false); }
 
@@ -1036,7 +1040,7 @@ async function viewStudent(id) {
 
   } catch (e) {
 
-    toast(e.message, false);
+    errorModal(e.message);
 
   } finally {
 
@@ -1096,7 +1100,7 @@ document.getElementById('studentViewFotoInput').addEventListener('change', async
 
     const data = await res.json();
 
-    toast('Foto enviada com sucesso');
+    successModal('Foto enviada com sucesso');
 
     input.value = '';
 
@@ -1106,7 +1110,7 @@ document.getElementById('studentViewFotoInput').addEventListener('change', async
 
   } catch (e) {
 
-    toast(e.message, false);
+    errorModal(e.message);
 
   } finally {
 
@@ -1132,7 +1136,7 @@ document.getElementById('createStudentForm').addEventListener('submit', async (e
 
   const letra = f.get('letra');
 
-  if (!nome || !ano || !letra) { toast('Preencha todos os campos', false); return; }
+  if (!nome || !ano || !letra) { errorModal('Preencha todos os campos'); return; }
 
   const turma = ano + letra;
 
@@ -1152,7 +1156,7 @@ document.getElementById('createStudentForm').addEventListener('submit', async (e
 
       successModal('Estudante cadastrado com sucesso!');
 
-    } catch (err) { toast(err.message, false); }
+    } catch (err) { errorModal(err.message); }
 
     finally { setLoading(btn, false); }
 
@@ -1172,47 +1176,136 @@ document.getElementById('bulkForm').addEventListener('submit', async (e) => {
 
   const file = f.get('file');
 
-  if (!file || !file.name) { toast('Selecione um CSV', false); return; }
+  if (!file || !file.name) return;
 
-  if (!file.name.toLowerCase().endsWith('.csv')) { toast('Arquivo deve ser .csv', false); return; }
+  if (!file.name.toLowerCase().endsWith('.csv')) return;
 
-  if (file.size === 0) { toast('Arquivo vazio', false); return; }
+  if (file.size === 0) return;
 
   const btn = e.target.querySelector('button[type=submit]');
 
-  setLoading(btn, true);
+  // Mostrar modal de carregamento
+  const importModal = document.getElementById('importModal');
+  const importProgress = document.getElementById('importProgress');
+  const importProgressText = document.getElementById('importProgressText');
+  const importProgressBar = document.getElementById('importProgressBar');
+  const importSuccess = document.getElementById('importSuccess');
+  const importError = document.getElementById('importError');
+  const importOkBtn = document.getElementById('importOkBtn');
+
+  // Desabilitar botao OK enquanto processa
+  if (importOkBtn) {
+    importOkBtn.disabled = true;
+    importOkBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  }
+
+  if (importProgress) importProgress.classList.remove('hidden');
+  if (importSuccess) importSuccess.classList.add('hidden');
+  if (importError) importError.classList.add('hidden');
+  if (importModal) {
+    importModal.classList.remove('hidden');
+    importModal.classList.add('flex');
+  }
 
   const fd = new FormData();
-
   fd.append('file', file);
 
   try {
 
     const res = await fetch('/api/students/bulk', {
-
       method: 'POST',
-
       headers: { 'Authorization': 'Bearer ' + API.token },
-
       body: fd,
-
     });
 
-    const data = await res.json();
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
 
-    if (!res.ok) throw new Error(data.msg || 'Erro');
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (line.trim()) {
+          const data = JSON.parse(line);
+          if (data.done) {
+            // Sucesso - mostrar check verde
+            if (importProgress) importProgress.classList.add('hidden');
+            if (importSuccess) importSuccess.classList.remove('hidden');
+            loadStudents(true);
+          } else {
+            const pct = Math.round((data.current / data.total) * 100);
+            if (importProgressText) importProgressText.textContent = data.current + '/' + data.total + ' (' + pct + '%)';
+            if (importProgressBar) importProgressBar.style.width = pct + '%';
+          }
+        }
+      }
+    }
 
-    toast(`Importados: ${data.created}`);
-
-    loadStudents(true);
-
-  } catch (err) { toast(err.message, false); }
-
-  finally { setLoading(btn, false); }
+  } catch (err) {
+    if (importProgress) importProgress.classList.add('hidden');
+    if (importSuccess) importSuccess.classList.add('hidden');
+    if (importError) importError.classList.remove('hidden');
+  } finally {
+    // Habilitar botao OK ao terminar
+    if (importOkBtn) {
+      importOkBtn.disabled = false;
+      importOkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+  }
 
 });
 
+// Função para fechar o modal de importação
+function closeImportModal() {
+  const importModal = document.getElementById('importModal');
+  const importProgress = document.getElementById('importProgress');
+  const importProgressText = document.getElementById('importProgressText');
+  const importProgressBar = document.getElementById('importProgressBar');
+  const importSuccess = document.getElementById('importSuccess');
+  const importError = document.getElementById('importError');
+  const importOkBtn = document.getElementById('importOkBtn');
 
+  if (importModal) {
+    importModal.classList.add('hidden');
+    importModal.classList.remove('flex');
+  }
+  if (importProgress) importProgress.classList.remove('hidden');
+  if (importProgressText) importProgressText.textContent = '0/0 (0%)';
+  if (importProgressBar) importProgressBar.style.width = '0%';
+  if (importSuccess) importSuccess.classList.add('hidden');
+  if (importError) importError.classList.add('hidden');
+  if (importOkBtn) {
+    importOkBtn.disabled = true;
+    importOkBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  }
+}
+
+// Excluir todos os estudantes
+document.getElementById('deleteAllStudentsLink').addEventListener('click', async (e) => {
+  e.preventDefault();
+  if (!confirm('Tem certeza que deseja excluir TODOS os estudantes? Esta ação não pode ser desfeita.')) {
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/students', {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + API.token },
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.msg || 'Erro ao excluir estudantes');
+
+    successModal(`${data.deleted} estudante(s) excluído(s) com sucesso`);
+    loadStudents(true);
+  } catch (err) {
+    errorModal(err.message || 'Erro ao excluir estudantes');
+  }
+});
 
 // Occurrences
 
@@ -1636,7 +1729,7 @@ async function loadOccurrences(reload) {
 
     renderOccurrences();
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
   finally {
 
@@ -1808,7 +1901,7 @@ document.getElementById('createOccForm').addEventListener('submit', async (e) =>
 
   const hora = f.get('hora');
 
-  if (!student_id || !tipo || !descricao || !data || !hora) { toast('Preencha todos os campos', false); return; }
+  if (!student_id || !tipo || !descricao || !data || !hora) { errorModal('Preencha todos os campos'); return; }
 
   const data_hora = `${data}T${hora}:00`;
 
@@ -1840,7 +1933,7 @@ document.getElementById('createOccForm').addEventListener('submit', async (e) =>
 
       successModal('Ocorrência registrada com sucesso!');
 
-    } catch (err) { toast(err.message, false); }
+    } catch (err) { errorModal(err.message); }
 
     finally { setLoading(btn, false); }
 
@@ -1862,13 +1955,13 @@ window.removeOccurrence = (id) => {
 
       await API.del(`/api/occurrences/${id}`);
 
-      toast('Ocorrência removida');
+      successModal('Ocorrência removida');
 
       loadOccurrences(true);
 
       loadStudents(true);
 
-    } catch (e) { toast(e.message, false); }
+    } catch (e) { errorModal(e.message); }
 
     finally { setLoading(btn, false); }
 
@@ -1886,7 +1979,7 @@ if (_btnOccPdf) _btnOccPdf.addEventListener('click', async () => {
 
   const turma = document.getElementById('className').value.trim();
 
-  if (!turma) { toast('Informe a turma', false); return; }
+  if (!turma) { errorModal('Informe a turma'); return; }
 
   setLoading(_btnOccPdf, true);
 
@@ -1914,7 +2007,7 @@ if (_btnOccPdf) _btnOccPdf.addEventListener('click', async () => {
 
     URL.revokeObjectURL(url);
 
-  } catch (err) { toast(err.message, false); }
+  } catch (err) { errorModal(err.message); }
 
   finally { setLoading(_btnOccPdf, false); }
 
@@ -1928,7 +2021,7 @@ if (_btnPtsPdf) _btnPtsPdf.addEventListener('click', async () => {
 
   const turma = document.getElementById('className').value.trim();
 
-  if (!turma) { toast('Informe a turma', false); return; }
+  if (!turma) { errorModal('Informe a turma'); return; }
 
   setLoading(_btnPtsPdf, true);
 
@@ -1956,7 +2049,7 @@ if (_btnPtsPdf) _btnPtsPdf.addEventListener('click', async () => {
 
     URL.revokeObjectURL(url);
 
-  } catch (err) { toast(err.message, false); }
+  } catch (err) { errorModal(err.message); }
 
   finally { setLoading(_btnPtsPdf, false); }
 
@@ -2002,7 +2095,7 @@ async function loadRequests() {
 
     updateReqBadge(data.length);
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
 }
 
@@ -2128,7 +2221,7 @@ async function loadUsers() {
 
     renderUsers();
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
 }
 
@@ -2230,13 +2323,13 @@ async function loadConfig() {
 
         <label class="text-sm flex-1">${tipo}</label>
 
-        <input data-penalty="${tipo}" type="number" step="0.1" value="${data.penalties[tipo]}" class="border rounded px-2 py-1 surface w-24" />
+        <input data-penalty="${tipo}" type="number" step="0.1" min="0" value="${data.penalties[tipo]}" class="border rounded px-2 py-1 surface w-24" />
 
       </div>
 
     `).join('');
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
 }
 
@@ -2262,7 +2355,7 @@ async function loadBimestres() {
 
     }
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
 }
 
@@ -2288,7 +2381,7 @@ document.getElementById('saveConfigBtn').addEventListener('click', async () => {
 
     await API.put('/api/admin/config', { initial_points: initial, penalties });
 
-    toast('Configuração salva e pontos recalculados');
+    successModal('Configuração salva e pontos recalculados');
 
     await loadPenalties(true);
 
@@ -2298,7 +2391,7 @@ document.getElementById('saveConfigBtn').addEventListener('click', async () => {
 
     loadOccurrences(true);
 
-  } catch (err) { toast(err.message, false); }
+  } catch (err) { errorModal(err.message); }
 
   finally { setLoading(btn, false); }
 
@@ -2326,9 +2419,9 @@ document.getElementById('saveBimestresBtn').addEventListener('click', async () =
 
     await API.put('/api/admin/bimestres', data);
 
-    toast('Datas dos bimestres salvas');
+    successModal('Datas dos bimestres salvas');
 
-  } catch (err) { toast(err.message, false); }
+  } catch (err) { errorModal(err.message); }
 
   finally { setLoading(btn, false); }
 
@@ -2346,11 +2439,11 @@ window.changeCargo = async (id, cargo) => {
 
     await API.patch(`/api/admin/users/${id}/cargo`, { cargo });
 
-    toast('Cargo atualizado');
+    successModal('Cargo atualizado');
 
     loadUsers();
 
-  } catch (e) { toast(e.message, false); }
+  } catch (e) { errorModal(e.message); }
 
   finally { setLoading(sel, false); }
 
@@ -2370,11 +2463,11 @@ window.removeUser = (id) => {
 
       await API.del(`/api/admin/users/${id}`);
 
-      toast('Usuário removido');
+      successModal('Usuário removido');
 
       loadUsers();
 
-    } catch (e) { toast(e.message, false); }
+    } catch (e) { errorModal(e.message); }
 
     finally { setLoading(btn, false); }
 
@@ -2396,9 +2489,9 @@ window.resetPassword = (id) => {
 
       await API.post(`/api/admin/users/${id}/reset-password`);
 
-      toast('Senha resetada');
+      successModal('Senha resetada');
 
-    } catch (e) { toast(e.message, false); }
+    } catch (e) { errorModal(e.message); }
 
     finally { setLoading(btn, false); }
 
@@ -2446,13 +2539,13 @@ window.approveReq = (id) => {
 
       await API.post(`/api/admin/registration-requests/${id}/approve`, { cargo });
 
-      toast('Aprovado');
+      successModal('Aprovado');
 
       loadRequests();
 
       loadUsers();
 
-    } catch (e) { toast(e.message, false); }
+    } catch (e) { errorModal(e.message); }
 
     finally { setLoading(btn, false); }
 
@@ -2466,7 +2559,7 @@ window.rejectReq = async (id) => {
 
   setLoading(btn, true);
 
-  try { await API.post(`/api/admin/registration-requests/${id}/reject`); toast('Rejeitado'); loadRequests(); } catch (e) { toast(e.message, false); }
+  try { await API.post(`/api/admin/registration-requests/${id}/reject`); errorModal('Rejeitado'); loadRequests(); } catch (e) { successModal(e.message); }
 
   finally { setLoading(btn, false); }
 
@@ -2522,7 +2615,7 @@ document.getElementById('createAdminForm').addEventListener('submit', async (e) 
 
       successModal('Usuário criado com sucesso!');
 
-    } catch (err) { toast(err.message, false); }
+    } catch (err) { errorModal(err.message); }
 
     finally { setLoading(btn, false); }
 
@@ -2548,7 +2641,7 @@ function openPdfBimestreModal(id) {
   document.getElementById('pdfBimestreOk').onclick = () => {
     const val = select.value;
     if (!val) {
-      toast('Selecione um bimestre.', false);
+      errorModal('Selecione um bimestre.');
       return;
     }
     pdfBimestreSelected = val;
@@ -2582,7 +2675,7 @@ async function generateStudentPdf(id, bimestre) {
     a.click();
     URL.revokeObjectURL(urlObj);
   } catch (err) {
-    toast(err.message, false);
+    errorModal(err.message);
   } finally {
     setLoading(btn, false);
   }

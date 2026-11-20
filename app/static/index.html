@@ -236,19 +236,28 @@
         <div id="blkStudents">
           <div class="mb-4">
             <h4 class="font-semibold mb-2">Cadastrar estudante</h4>
-            <form id="createStudentForm" class="flex gap-2 flex-wrap items-end">
-              <input name="nome" placeholder="Nome" class="border rounded px-3 py-2 surface flex-1" required />
-              <select name="ano" class="border rounded px-3 py-2 surface" required>
-                <option value="" disabled selected>Selecione Ano</option>
-                <option value="1">1°</option>
-                <option value="2">2°</option>
-                <option value="3">3°</option>
-              </select>
-              <select name="letra" class="border rounded px-3 py-2 surface" required>
-                <option value="" disabled selected>Selecione a turma</option>
-              </select>
-              <button type="submit" class="btn-primary px-4 py-2 rounded">Cadastrar</button>
+            <form id="createStudentForm" class="flex flex-col gap-2">
+              <div class="flex flex-col gap-2">
+                <input name="nome" placeholder="Nome" class="border rounded px-3 py-2 surface w-full" required />
+              </div>
+              <div class="flex gap-2">
+                <select name="ano" class="border rounded px-3 py-2 surface flex-1" required>
+                  <option value="" disabled selected>Selecione Ano</option>
+                  <option value="1">1°</option>
+                  <option value="2">2°</option>
+                  <option value="3">3°</option>
+                </select>
+                <select name="letra" class="border rounded px-3 py-2 surface flex-1" required>
+                  <option value="" disabled selected>Selecione a turma</option>
+                </select>
+              </div>
+              <button type="submit" class="btn-primary px-4 py-2 rounded w-full">Cadastrar</button>
             </form>
+            <span class="flex justify-end">
+              <a href="#" id="deleteAllStudentsLink" class="text-xs font-medium text-red-600 hover:text-red-800 hover:underline">
+                Excluir estudantes
+              </a>
+            </span>
           </div>
           <div>
             <h4 class="font-semibold mb-2 flex items-center gap-2">
@@ -261,6 +270,31 @@
               <input type="file" name="file" accept=".csv" class="surface" />
               <button class="btn-primary px-4 py-2 rounded">Importar</button>
             </form>
+
+            <!-- Import Modal -->
+            <div id="importModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+              <div class="surface border rounded p-6 w-full max-w-md">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="font-semibold">Importar estudantes</h3>
+                  <button onclick="closeImportModal()" class="text-muted hover:text-red-500 text-2xl leading-none">&times;</button>
+                </div>
+                <div id="importProgress" class="hidden mb-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <span id="importProgressText" class="text-sm font-medium">0/0 (0%)</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="importProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-200" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div id="importSuccess" class="hidden mb-4 text-green-600">
+                  Importação concluída com sucesso
+                </div>
+                <div id="importError" class="hidden mb-4 text-red-600">
+                  Erro na importação
+                </div>
+                <button id="importOkBtn" onclick="closeImportModal()" disabled class="btn-primary px-4 py-2 rounded w-full opacity-50 cursor-not-allowed">OK</button>
+              </div>
+            </div>
           </div>
         </div>
         <div id="blkRequests">
@@ -269,7 +303,7 @@
         <div id="blkConfig">
           <div class="mb-3">
             <label class="text-sm text-muted block mb-1">Ponto inicial por estudante</label>
-            <input id="cfgInitial" type="number" step="0.1" class="border rounded px-3 py-2 surface w-full" />
+            <input id="cfgInitial" type="number" step="0.1" min="0" class="border rounded px-3 py-2 surface w-full" />
           </div>
           <div id="cfgPenalties" class="space-y-2 mb-3"></div>
           <button id="saveConfigBtn" class="btn-primary px-4 py-2 rounded w-full">Salvar</button>
@@ -417,9 +451,8 @@
     </div>
   </div>
 
-  <div id="toast" class="fixed bottom-4 right-4 px-4 py-2 rounded shadow hidden"></div>
-
+  
   <script src="/static/js/api.js?v=4"></script>
-  <script src="/static/js/app.js?v=43"></script>
+  <script src="/static/js/app.js?v=49"></script>
 </body>
 </html>
