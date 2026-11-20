@@ -508,7 +508,7 @@ let studentSort = { key: 'nome', dir: 'asc' };
 
 let studentPage = 1;
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 5;
 
 let _studentsInitDone = false;
 
@@ -1715,8 +1715,6 @@ function renderOccurrences(resetPage) {
       <td class="p-2">${o.student_nome || o.student_id}</td>
 
       <td class="p-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${badgeClass(o.tipo)}">${displayType(o.tipo)}</span></td>
-
-      <td class="p-2">${o.bimestre ? `B${o.bimestre}` : '-'}</td>
 
       <td class="p-2">${o.nome_registrador} (${o.cargo_registrador})</td>
 

@@ -95,8 +95,8 @@
         <div id="occCardLoading" class="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 z-10">
           <span class="animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></span>
         </div>
-        <h3 class="font-semibold mb-4 text-center">Registrar Ocorrência</h3>
-        <form id="createOccForm" class="space-y-3">
+        <h3 class="font-semibold mb-1 text-center">Registrar Ocorrência</h3>
+        <form id="createOccForm" class="space-y-1">
           <!-- Estudante com busca integrada no select (lugar da turma) -->
           <div>
             <label class="text-sm text-muted block mb-1">Estudante</label>
@@ -130,12 +130,12 @@
               <label class="text-sm text-muted block mb-1">Hora</label>
               <input name="hora" type="time" class="border rounded px-3 py-2 surface w-full" required />
             </div>
-            <div class="flex items-end">
+            <!-- <div class="flex items-end">
               <label class="text-sm text-muted block mb-1 w-full">Bimestre</label>
-              <!-- <div class="w-full">
+               <div class="w-full">
                 <input id="occBimestreDisplay" type="text" class="border rounded px-3 py-2 surface w-full" readonly placeholder="Bimestre será calculado automaticamente" />
-              </div> -->
-            </div>
+              </div>
+            </div>  -->
           </div>
           <div>
             <label class="text-sm text-muted block mb-1">Descrição</label>
@@ -145,7 +145,7 @@
         </form>
       </div>
       <div class="surface border rounded p-4 mb-2">
-        <h3 class="font-semibold mb-2">Filtrar Ocorrências</h3>
+        <!-- <h3 class="font-semibold mb-2">Filtrar Ocorrências</h3> -->
         <div class="flex gap-2 items-center flex-wrap">
           <!-- <label class="text-sm text-muted"></label> -->
           <select id="occFilterBy" class="border rounded px-3 py-1 surface">
@@ -163,7 +163,6 @@
               <th class="p-2 text-left">Data</th>
               <th class="p-2 text-left">Estudante</th>
               <th class="p-2 text-left">Tipo</th>
-              <th class="p-2 text-left">Bimestre</th>
               <th class="p-2 text-left">Registrado por</th>
               <th class="p-2 text-left">Descrição</th>
               <th class="p-2 text-left">Ações</th>
@@ -421,6 +420,6 @@
   <div id="toast" class="fixed bottom-4 right-4 px-4 py-2 rounded shadow hidden"></div>
 
   <script src="/static/js/api.js?v=4"></script>
-  <script src="/static/js/app.js?v=41"></script>
+  <script src="/static/js/app.js?v=43"></script>
 </body>
 </html>
