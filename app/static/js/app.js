@@ -84,6 +84,15 @@ function statusBadgeClass(s) {
 
 
 
+// Toast
+function toast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'fixed bottom-4 right-4 px-4 py-2 rounded shadow text-white ' + (ok ? 'bg-green-600' : 'bg-red-600');
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
 // Loading spinner on buttons
 
 function setLoading(btn, loading) {
@@ -396,7 +405,7 @@ function updateAuthUI() {
 
 }
 
-document.getElementById('logoutBtn').addEventListener('click', () => { clearAuth(); successModal('Saiu'); });
+document.getElementById('logoutBtn').addEventListener('click', () => { clearAuth(); toast('Saiu'); });
 
 
 
@@ -428,7 +437,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     setAuth(data.access_token, data.user);
 
-    successModal('Login realizado');
+    toast('Login realizado');
 
   } catch (err) {
 

@@ -33,8 +33,8 @@ const API = {
         if (res.status === 401) {
           API.clearToken();
           if (typeof clearAuth === 'function') clearAuth();
-          toast('Sessão expirada. Faça login novamente.', false);
-          return;
+          const msg = (data && data.msg) ? data.msg : 'Credenciais inválidas';
+          throw new Error(msg);
         }
         throw new Error(msg || ('HTTP ' + res.status));
       }
