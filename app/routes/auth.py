@@ -3,6 +3,7 @@ from flask_jwt_extended import create_access_token
 
 from app import db
 from app.models.user import User
+from app.utils.decorators import login_required_approved, get_current_user
 from app.models.registration_request import RegistrationRequest
 from app.config import Config
 
@@ -29,6 +30,35 @@ def login():
         "access_token": token,
         "user": user.to_dict(),
     }), 200
+
+
+@auth_bp.route("/theme", methods=["PATCH"])
+@login_required_approved
+def update_theme():
+    data = request.get_json() or {}
+    theme = data.get("theme")
+    if not theme or ":" not in theme:
+        return jsonify({"msg": "theme invalido (formato: cor:modo)"}), 400
+    color, mode = theme.split(":", 1)
+    if color not in ("blue", "red", "pink", "green", "orange", "purple"):
+        return jsonify({"msg": "cor invalida"}), 400
+    if mode not in ("light", "dark"):
+        return jsonify({"msg": "modo invalido"}), 400
+    user = get_current_user()
+    if user is None:
+        return jsonify({"msg": "Usuario nao encontrado"}), 404
+    user.theme = theme
+    db.session.commit()
+    return jsonify({"msg": "Tema atualizado", "theme": user.theme}), 200
+
+
+@auth_bp.route("/theme", methods=["GET"])
+@login_required_approved
+def get_theme():
+    user = get_current_user()
+    if user is None:
+        return jsonify({"msg": "Usuario nao encontrado"}), 404
+    return jsonify({"theme": user.theme or "blue:light"}), 200
 
 
 @auth_bp.route("/register", methods=["POST"])

@@ -14,6 +14,7 @@ class User(db.Model):
     approved = db.Column(db.Boolean, default=False, nullable=False)
     cpf = db.Column(db.String(20), unique=True, nullable=True, index=True)
     nome_completo = db.Column(db.String(120), nullable=True)
+    theme = db.Column(db.String(40), nullable=True, default="blue:light")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
@@ -30,5 +31,6 @@ class User(db.Model):
             "approved": self.approved,
             "cpf": self.cpf,
             "nome_completo": self.nome_completo,
+            "theme": self.theme or "blue:light",
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

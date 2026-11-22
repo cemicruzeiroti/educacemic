@@ -10,19 +10,115 @@
 
 
 
-function toggleTheme() {
+// Theme picker
+const colorHex = { blue: '#2563eb', red: '#dc2626', pink: '#ec4899', green: '#16a34a', orange: '#ea580c', purple: '#9333ea' };
 
+function applyTheme(color, mode) {
   const html = document.documentElement;
+  // Set color theme
+  if (color === 'blue') {
+    html.removeAttribute('data-theme');
+  } else {
+    html.setAttribute('data-theme', color);
+  }
+  // Set dark/light mode
+  if (mode === 'dark') {
+    html.classList.add('dark');
+  } else {
+    html.classList.remove('dark');
+  }
+  // Save to localStorage
+  localStorage.setItem('colorTheme', color);
+  localStorage.setItem('theme', mode);
 
-  html.classList.toggle('dark');
+  // Update user object in localStorage
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (user) {
+      user.theme = `${color}:${mode}`;
+      localStorage.setItem('user', JSON.stringify(user));
+    }
+  } catch (e) {}
 
-  localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-
+  // Save to backend if logged in
+  if (API.token) {
+    API.patch('/api/auth/theme', { theme: `${color}:${mode}` }).catch(() => {});
+  }
+  // Update active swatch
+  document.querySelectorAll('.theme-grid-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.color === color && btn.dataset.mode === mode);
+  });
+  // Update user menu button tooltip
+  const userMenuBtn = document.getElementById('userMenuBtn');
+  if (userMenuBtn) {
+    const modeLabel = mode === 'dark' ? 'dark' : 'light';
+    const colorNames = { blue: 'Azul', red: 'Vermelho', pink: 'Rosa', green: 'Verde', orange: 'Laranja', purple: 'Roxo' };
+    userMenuBtn.title = `Tema: ${colorNames[color] || color} (${modeLabel})`;
+  }
 }
 
-document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+// Initialize theme from localStorage
+(function initThemePicker() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    // No user logged in - force default theme
+    localStorage.setItem('colorTheme', 'blue');
+    localStorage.setItem('theme', 'light');
+    applyTheme('blue', 'light');
+  } else {
+    const savedColor = localStorage.getItem('colorTheme') || 'blue';
+    const savedMode = localStorage.getItem('theme') || 'light';
+    applyTheme(savedColor, savedMode);
+  }
+})();
 
+// User menu dropdown toggle
+const userMenuBtn = document.getElementById('userMenuBtn');
+const userMenuDropdown = document.getElementById('userMenuDropdown');
+if (userMenuBtn) {
+  userMenuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (userMenuDropdown) userMenuDropdown.classList.toggle('hidden');
+    // Close theme submenu when closing user menu
+    const themeSubMenu = document.getElementById('themeSubMenu');
+    if (themeSubMenu && userMenuDropdown.classList.contains('hidden')) {
+      themeSubMenu.classList.add('hidden');
+    }
+  });
+}
 
+// Tema menu item click - toggle submenu
+const themeMenuItem = document.getElementById('themeMenuItem');
+const themeSubMenu = document.getElementById('themeSubMenu');
+if (themeMenuItem) {
+  themeMenuItem.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (themeSubMenu) themeSubMenu.classList.toggle('hidden');
+  });
+  themeMenuItem.addEventListener('mouseenter', () => {
+    if (themeSubMenu) themeSubMenu.classList.remove('hidden');
+  });
+}
+
+// Theme grid button click - apply and collapse
+document.querySelectorAll('.theme-grid-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const color = btn.dataset.color;
+    const mode = btn.dataset.mode;
+    applyTheme(color, mode);
+    if (themeSubMenu) themeSubMenu.classList.add('hidden');
+    if (userMenuDropdown) userMenuDropdown.classList.add('hidden');
+  });
+});
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (userMenuDropdown && !userMenuDropdown.contains(e.target) && e.target !== userMenuBtn && !userMenuBtn.contains(e.target)) {
+    userMenuDropdown.classList.add('hidden');
+    if (themeSubMenu) themeSubMenu.classList.add('hidden');
+  }
+});
 
 // Date formatting (dd/mm/yyyy HH:MM)
 
@@ -325,6 +421,11 @@ function clearAuth() {
 
   localStorage.removeItem('user');
 
+  // Reset theme to default (blue light)
+  localStorage.setItem('colorTheme', 'blue');
+  localStorage.setItem('theme', 'light');
+  applyTheme('blue', 'light');
+
   updateAuthUI();
 
 }
@@ -339,13 +440,26 @@ function updateAuthUI() {
 
   const who = document.getElementById('whoami');
 
+  const userMenuBtn = document.getElementById('userMenuBtn');
+
   if (user && API.token) {
 
     nav.classList.remove('hidden');
 
     logout.classList.remove('hidden');
 
+    if (userMenuBtn) {
+      userMenuBtn.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
     who.textContent = `${user.username} (${user.cargo})`;
+
+    // Load theme from user profile
+    if (user.theme) {
+      const [color, mode] = user.theme.split(':');
+      applyTheme(color || 'blue', mode || 'light');
+    }
 
     const allowed = {
 
@@ -397,7 +511,14 @@ function updateAuthUI() {
 
     logout.classList.add('hidden');
 
+    if (userMenuBtn) userMenuBtn.classList.add('hidden');
+
     who.textContent = '';
+
+    // Reset theme to default on logout
+    localStorage.setItem('colorTheme', 'blue');
+    localStorage.setItem('theme', 'light');
+    applyTheme('blue', 'light');
 
     showView('auth');
 
@@ -436,6 +557,12 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     });
 
     setAuth(data.access_token, data.user);
+
+    // Load theme from user profile
+    if (data.user && data.user.theme) {
+      const [color, mode] = data.user.theme.split(':');
+      applyTheme(color || 'blue', mode || 'light');
+    }
 
     toast('Login realizado');
 

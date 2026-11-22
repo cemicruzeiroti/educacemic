@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Educa CEMI</title>
   <link rel="stylesheet" href="/static/css/tailwind.css?v=1" />
-  <link rel="stylesheet" href="/static/css/theme.css?v=2" />
+  <link rel="stylesheet" href="/static/css/theme.css?v=12" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body class="min-h-screen">
@@ -20,8 +20,36 @@
         <button data-view="admin" class="navbtn px-3 py-1 rounded surface">Admin</button>
       </nav>
       <div class="flex items-center gap-3 ml-auto">
-        <span id="whoami" class="text-sm text-muted"></span>
-        <button id="themeToggle" class="px-3 py-1 rounded border surface">Tema</button>
+        <div class="user-menu" style="position: relative;">
+          <button id="userMenuBtn" class="px-3 py-1 rounded border surface hidden flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span id="whoami" class="text-sm"></span>
+          </button>
+          <div id="userMenuDropdown" class="theme-picker-dropdown hidden" style="min-width: 180px; top: 100%; right: 0;">
+            <div class="user-menu-item" id="themeMenuItem" style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-radius: 4px; transition: background 0.15s;">
+              <span>Tema</span>
+              <span style="font-size: 12px; color: var(--muted);">▸</span>
+            </div>
+            <div id="themeSubMenu" class="theme-picker-dropdown hidden" style="position: absolute; top: 0; left: 100%; margin-left: 4px; min-width: 200px;">
+              <div style="padding: 8px;">
+                <div class="theme-grid">
+                  <button class="theme-grid-btn" data-color="blue" data-mode="light" title="Azul (light)" style="background: #2563eb;"></button>
+                  <button class="theme-grid-btn" data-color="blue" data-mode="dark" title="Azul (dark)" style="background: linear-gradient(135deg, #2563eb 50%, #1e293b 50%);"></button>
+                  <button class="theme-grid-btn" data-color="red" data-mode="light" title="Vermelho (light)" style="background: #dc2626;"></button>
+                  <button class="theme-grid-btn" data-color="red" data-mode="dark" title="Vermelho (dark)" style="background: linear-gradient(135deg, #dc2626 50%, #1e293b 50%);"></button>
+                  <button class="theme-grid-btn" data-color="pink" data-mode="light" title="Rosa (light)" style="background: #ec4899;"></button>
+                  <button class="theme-grid-btn" data-color="pink" data-mode="dark" title="Rosa (dark)" style="background: linear-gradient(135deg, #ec4899 50%, #1e293b 50%);"></button>
+                  <button class="theme-grid-btn" data-color="green" data-mode="light" title="Verde (light)" style="background: #16a34a;"></button>
+                  <button class="theme-grid-btn" data-color="green" data-mode="dark" title="Verde (dark)" style="background: linear-gradient(135deg, #16a34a 50%, #1e293b 50%);"></button>
+                  <button class="theme-grid-btn" data-color="orange" data-mode="light" title="Laranja (light)" style="background: #ea580c;"></button>
+                  <button class="theme-grid-btn" data-color="orange" data-mode="dark" title="Laranja (dark)" style="background: linear-gradient(135deg, #ea580c 50%, #1e293b 50%);"></button>
+                  <button class="theme-grid-btn" data-color="purple" data-mode="light" title="Roxo (light)" style="background: #9333ea;"></button>
+                  <button class="theme-grid-btn" data-color="purple" data-mode="dark" title="Roxo (dark)" style="background: linear-gradient(135deg, #9333ea 50%, #1e293b 50%);"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <button id="logoutBtn" class="px-3 py-1 rounded border surface hidden">Sair</button>
       </div>
     </div>
@@ -451,6 +479,6 @@
   
   <script src="/static/js/api.js?v=5"></script>
   <div id="toast" class="fixed bottom-4 right-4 px-4 py-2 rounded shadow hidden"></div>
-<script src="/static/js/app.js?v=52"></script>
+<script src="/static/js/app.js?v=65"></script>
 </body>
 </html>

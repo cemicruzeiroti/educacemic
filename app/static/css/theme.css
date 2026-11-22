@@ -1,3 +1,4 @@
+/* Default theme (Blue) - Light */
 :root {
   --brand: #2563eb;
   --brand-dark: #1d4ed8;
@@ -7,6 +8,8 @@
   --muted: #64748b;
   --border: #e2e8f0;
 }
+
+/* Default theme (Blue) - Dark */
 .dark {
   --brand: #60a5fa;
   --brand-dark: #3b82f6;
@@ -16,6 +19,107 @@
   --muted: #94a3b8;
   --border: #334155;
 }
+
+/* Theme: Green */
+html[data-theme="green"] {
+  --brand: #16a34a;
+  --brand-dark: #15803d;
+  --bg: #f0fdf4;
+  --surface: #ffffff;
+  --text: #14532d;
+  --muted: #4b7c5e;
+  --border: #bbf7d0;
+}
+html[data-theme="green"].dark {
+  --brand: #4ade80;
+  --brand-dark: #22c55e;
+  --bg: #052e16;
+  --surface: #14532d;
+  --text: #dcfce7;
+  --muted: #86efac;
+  --border: #166534;
+}
+
+/* Theme: Purple */
+html[data-theme="purple"] {
+  --brand: #9333ea;
+  --brand-dark: #7e22ce;
+  --bg: #faf5ff;
+  --surface: #ffffff;
+  --text: #3b0764;
+  --muted: #7c3aed;
+  --border: #e9d5ff;
+}
+html[data-theme="purple"].dark {
+  --brand: #c084fc;
+  --brand-dark: #a855f7;
+  --bg: #1e1b4b;
+  --surface: #312e81;
+  --text: #e9d5ff;
+  --muted: #c4b5fd;
+  --border: #4c1d95;
+}
+
+/* Theme: Orange */
+html[data-theme="orange"] {
+  --brand: #ea580c;
+  --brand-dark: #c2410c;
+  --bg: #fff7ed;
+  --surface: #ffffff;
+  --text: #431407;
+  --muted: #9a3412;
+  --border: #fed7aa;
+}
+html[data-theme="orange"].dark {
+  --brand: #fb923c;
+  --brand-dark: #f97316;
+  --bg: #1c1917;
+  --surface: #292524;
+  --text: #ffedd5;
+  --muted: #fdba74;
+  --border: #44403c;
+}
+
+/* Theme: Red */
+html[data-theme="red"] {
+  --brand: #dc2626;
+  --brand-dark: #b91c1c;
+  --bg: #fef2f2;
+  --surface: #ffffff;
+  --text: #450a0a;
+  --muted: #991b1b;
+  --border: #fecaca;
+}
+html[data-theme="red"].dark {
+  --brand: #f87171;
+  --brand-dark: #ef4444;
+  --bg: #1c1917;
+  --surface: #292524;
+  --text: #fee2e2;
+  --muted: #fca5a5;
+  --border: #44403c;
+}
+
+/* Theme: Pink */
+html[data-theme="pink"] {
+  --brand: #ec4899;
+  --brand-dark: #db2777;
+  --bg: #fdf2f8;
+  --surface: #ffffff;
+  --text: #831843;
+  --muted: #be185d;
+  --border: #fbcfe8;
+}
+html[data-theme="pink"].dark {
+  --brand: #f472b6;
+  --brand-dark: #ec4899;
+  --bg: #1a0a14;
+  --surface: #4a1942;
+  --text: #fce7f3;
+  --muted: #f9a8d4;
+  --border: #831843;
+}
+
 body { background: var(--bg); color: var(--text); }
 .surface { background: var(--surface); border-color: var(--border); }
 .text-muted { color: var(--muted); }
@@ -38,3 +142,76 @@ body { background: var(--bg); color: var(--text); }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Theme picker */
+.theme-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.theme-picker-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.2s;
+  display: inline-block;
+  padding: 0;
+}
+
+.theme-picker-btn:hover {
+  transform: scale(1.1);
+}
+
+.theme-picker-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 4px;
+}
+
+.theme-grid-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--border);
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+}
+
+.theme-grid-btn:hover {
+  transform: scale(1.1);
+}
+
+.theme-grid-btn.active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--brand);
+}
+
+.theme-grid-btn.active::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
