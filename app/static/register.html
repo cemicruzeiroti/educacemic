@@ -14,18 +14,16 @@
   <header class="surface border-b sticky top-0 z-10">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <h1 class="text-xl font-bold link">Educa CEMI</h1>
-      <div class="flex items-center gap-3">
-        <button id="themeToggle" class="px-3 py-1 rounded border surface">Tema</button>
-      </div>
+      
     </div>
   </header>
   <main class="max-w-md mx-auto px-4 py-10">
     <div class="surface border rounded p-8">
-      <h2 class="text-2xl font-semibold mb-6 text-center">Cadastro pÃºblico</h2>
+      <h2 class="text-2xl font-semibold mb-6 text-center">Cadastro público</h2>
       <form id="registerForm" class="space-y-3">
-        <input name="cpf" placeholder="CPF (apenas nÃºmeros)" inputmode="numeric" pattern="[0-9]*" maxlength="11" class="w-full border rounded px-3 py-2 surface" required />
+        <input name="cpf" placeholder="CPF (apenas números)" inputmode="numeric" pattern="[0-9]*" maxlength="11" class="w-full border rounded px-3 py-2 surface" required />
         <input name="nome_completo" placeholder="Nome completo" class="w-full border rounded px-3 py-2 surface" required />
-        <input name="username" placeholder="Nome de usuÃ¡rio" class="w-full border rounded px-3 py-2 surface" required />
+        <input name="username" placeholder="Nome de usuário" class="w-full border rounded px-3 py-2 surface" required />
         <input name="password" type="password" placeholder="Senha" class="w-full border rounded px-3 py-2 surface" required />
         <button id="registerBtn" class="btn-primary px-4 py-2 rounded w-full flex items-center justify-center gap-2">
           <span id="registerSpinner" class="hidden animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
@@ -33,7 +31,7 @@
         </button>
       </form>
       <p id="registerMsg" class="text-sm mt-2 text-center"></p>
-      <p class="text-sm text-center mt-4"><a href="/" class="link">JÃ¡ possui conta? Entrar</a></p>
+      <p class="text-sm text-center mt-4"><a href="/" class="link">Já possui conta? Entrar</a></p>
     </div>
   </main>
   <script src="/static/js/api.js"></script>
@@ -52,12 +50,11 @@
     (function initTheme() {
       const saved = localStorage.getItem('theme') || 'light';
       if (saved === 'dark') document.documentElement.classList.add('dark');
+      const colorTheme = localStorage.getItem('colorTheme') || 'blue';
+      if (colorTheme !== 'blue') {
+        document.documentElement.setAttribute('data-theme', colorTheme);
+      }
     })();
-    document.getElementById('themeToggle').addEventListener('click', () => {
-      const html = document.documentElement;
-      html.classList.toggle('dark');
-      localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-    });
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
